@@ -5,6 +5,7 @@ import org.apache.bcel.classfile.JavaClass;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.SQLOutput;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
@@ -13,8 +14,8 @@ import java.util.jar.JarFile;
 public class JarBytecodeExtractor {
     public static void main(String[] args) {
 
-        String jarFilePath = "main.jar";
-        String classFilePath = "src/main/java/org/example/Main.class";
+        String jarFilePath = "/Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/main.jar";
+//        String classFilePath = "src/main/java/org/example/Main.class";
 
         try {
             JarFile jarFile = new JarFile(jarFilePath);
@@ -28,8 +29,7 @@ public class JarBytecodeExtractor {
                 if (entryName.endsWith(".class")) {
 
                     System.out.println("Class: " + entryName);
-
-
+//
                     ClassParser parser = new ClassParser(jarFilePath, entryName);
                     JavaClass javaClass = parser.parse();
 
@@ -38,11 +38,12 @@ public class JarBytecodeExtractor {
                     System.out.println("Superclass: " + javaClass.getSuperclassName());
 
                     var methods = javaClass.getMethods();
-
                     System.out.println("Methods:");
                     for (var m : methods) {
                         System.out.println(m.getName());
-//                        System.out.println(m.getCode());
+                        System.out.println("--------------------------------------");
+                        System.out.println(m.getCode());
+                        System.out.println("--------------------------------------");
 
                     }
 
@@ -55,21 +56,29 @@ public class JarBytecodeExtractor {
 //                    return;
 //                }
 
-                InputStream inputStream = jarFile.getInputStream(entry);
-                byte[] bytecode = inputStream.readAllBytes();
-                inputStream.close();
-                jarFile.close();
-
-                System.out.println("Bytecode " + classFilePath + ":");
-                for (byte b : bytecode) {
-                    System.out.printf("%02x ", b);
+                    InputStream inputStream = jarFile.getInputStream(entry);
+//                byte[] bytecode = inputStream.readAllBytes();
+                    inputStream.close();
+                    jarFile.close();
+//
+//                System.out.println("Bytecode :");
+//           ¬     for (byte b : bytecode) {
+//                    System.out.printf("%02x ", b);
+//                }
+//                System.out.println();
                 }
-                System.out.println();
-                }
 
-}
+            }
+
+
+
+
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+
+
     }
 }
