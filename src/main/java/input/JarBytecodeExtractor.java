@@ -1,26 +1,31 @@
-package jaranalysis;
+package input;
 
+import org.apache.bcel.Const;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
+import org.apache.bcel.util.ByteSequence;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.SQLOutput;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import static analysis.ClassFileAnalyser.analyseByteCodeOfMethod;
+
 public class JarBytecodeExtractor {
     public static void main(String[] args) {
 
-        String jarFilePath = "/Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/main.jar";
-//        String classFilePath = "src/main/java/org/example/Main.class";
+        String jarFilePath = "/Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/example.jar";
 
         try {
             JarFile jarFile = new JarFile(jarFilePath);
 
             Enumeration<JarEntry> entries = jarFile.entries();
+            if (!entries.asIterator().hasNext()) {
+                System.out.println("JAR IS EMPTY");
+            }
 
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
@@ -29,7 +34,6 @@ public class JarBytecodeExtractor {
                 if (entryName.endsWith(".class")) {
 
                     System.out.println("Class: " + entryName);
-//
                     ClassParser parser = new ClassParser(jarFilePath, entryName);
                     JavaClass javaClass = parser.parse();
 
@@ -41,20 +45,19 @@ public class JarBytecodeExtractor {
                     System.out.println("Methods:");
                     for (var m : methods) {
                         System.out.println(m.getName());
-                        System.out.println("--------------------------------------");
-                        System.out.println(m.getCode());
-                        System.out.println("--------------------------------------");
+                        System.out.println(Arrays.toString(m.getArgumentTypes()));
+//                        System.out.println("--------------------------------------");
+//                        System.out.println(m.getCode());
+//                        System.out.println("--------------------------------------");
+
+
+                        if (m.getName().equals("main")) {
+                            byte[] code = m.getCode().getCode();
+                            analyseByteCodeOfMethod(code);
+
+                        }
 
                     }
-
-
-//                JarEntry entry = jarFile.getJarEntry(classFilePath);
-
-//                if (entry == null) {
-//                    System.out.println("Class file " + classFilePath + " not found in JAR.");
-//                    jarFile.close();
-//                    return;
-//                }
 
                     InputStream inputStream = jarFile.getInputStream(entry);
 //                byte[] bytecode = inputStream.readAllBytes();
@@ -78,7 +81,6 @@ public class JarBytecodeExtractor {
             throw new RuntimeException(e);
         }
 
-
-
     }
+
 }
