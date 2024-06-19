@@ -4,119 +4,141 @@ import org.apache.bcel.Const;
 import org.apache.bcel.util.ByteSequence;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static analysis.InstructionsMatcher.*;
+
+
 public class ClassFileAnalyser {
 
-    public static void analyseByteCodeOfMethod(byte[] methodCode) {
+    Stack<Boolean> stack = new Stack<>();
+    HashSet<Integer> unsafeVars = new HashSet<>(Set.of(0));
 
-        HashSet<Integer> unsafeVars = new HashSet<>(Set.of(0));
-        HashSet<Integer> unknownVars = new HashSet<>(Set.of(0));
-        Stack<Boolean> stack = new Stack<>();
+
+    public void analyseByteCodeOfMethod(byte[] methodCode) {
+
         ArrayList<Integer> unsafeCodeLines = new ArrayList<>();
+
+
+        System.out.println(methodCode.length);
 
         try (ByteSequence stream = new ByteSequence(methodCode)) {
 
-            for (int i = 0; stream.available() > 0; i++) {
+            int lineNumber = 0;
 
-                // Get line number
-                int lineNumber = stream.getIndex();
+            while (lineNumber < methodCode.length) {
+                short opCode = (short) (methodCode[lineNumber] & 0xff);
+
 
                 // Find out JVM instruction opcode for this line of code.
-                short opCode = (short) stream.readUnsignedByte();
+//                short opCode = (short) stream.readUnsignedByte();
+                System.out.println(opCode);
 
                 var name = Const.getOpcodeName(opCode);
                 System.out.println(lineNumber + ": " + name);
 
-                analyseOpCode(name, stack, unsafeVars);
+                var result = analyseOpCode(name, methodCode, lineNumber);
+                unsafeVars.addAll(result.getKey());
+                lineNumber = result.getValue();
 
             }
 
             System.out.println("Unsafe vars numbers: " + unsafeVars);
+
         } catch (final IOException e) {
             e.printStackTrace();
         }
 
     }
 
-    static void analyseOpCode(String name, Stack<Boolean> stack, Set<Integer> unsafeVars) {
+    Map.Entry<Set<Integer>, Integer> analyseOpCode(String name, byte[] stream, int lineNumber) throws IOException {
 
-        if (matchConstStore(name)) {
+        int newLineNumber = lineNumber;
+        Set<Integer> newUnsafeVars = new HashSet<>();
+        if (matchConstLoad(name)) {
             stack.add(true);
-        }
-        else if (matchStoreVariable(name)) {
+            lineNumber++;
+        } else if (matchConstLoadFromPool(name)) {
+            stack.add(true);
+            lineNumber += 2;
+        } else if (matchStoreData(name)) {
             var varNumber = getNumberInOpCode(name);
             if (!stack.pop()) {
-                unsafeVars.add(varNumber);
+                newUnsafeVars.add(varNumber);
             }
-        }
-        else if (matchLoadVariable(name)) {
+            lineNumber++;
+        } else if (matchLoadVariable(name)) {
             var varNumber = getNumberInOpCode(name);
             stack.add(!unsafeVars.contains(varNumber));
-        }
-        else if (matchBinOperation(name)) {
+            lineNumber++;
+        } else if (matchBinOperation(name)) {
             var first = stack.pop();
             var second = stack.pop();
             stack.add(first && second);
-        }
-        else if (matchLoadArrayElem(name)) {
+            lineNumber++;
+        } else if (matchLoadArrayElem(name)) {
             stack.pop();
             var isSafe = stack.pop();
             stack.add(isSafe);
-        }
-        else if (!matchReturn(name)){
+            lineNumber++;
+        } else if (matchIf(name)) {
+            lineNumber = analyseIfBlock(stream, lineNumber, name);
+        } else if (!matchReturn(name)) {
             System.out.println("UNKNOWN OPCODE: " + name);
+            lineNumber++;
+        } else {
+            lineNumber++;
         }
 
-    }
-
-    static void analyseIfBlock() {
+        return Map.entry(newUnsafeVars, lineNumber);
 
     }
 
+    int analyseIfBlock(byte[] stream, int lineNumber, String opCode) throws IOException {
+        int branchbyte1 = stream[lineNumber + 1] & 0xff;
+        int branchbyte2 = stream[lineNumber + 2] & 0xff;
+        int moveTo = (branchbyte1 << 8 | branchbyte2) + lineNumber; // branch to instruction on this line
+        var result = analyseIfBranch(stream, lineNumber + 3, moveTo);
+        var newUnsafeVars = result.getKey();
+        unsafeVars.addAll(newUnsafeVars);
+        var lastStepMove = result.getValue();
+        if (lastStepMove != moveTo) {
+            var result2 = analyseIfBranch(stream, moveTo, lastStepMove);
+            unsafeVars.addAll(result2.getKey());
+        }
 
+        return moveTo;
 
-
-    static boolean matchConstStore(String opCode) {
-        String regex = ".const.*";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opCode);
-        return matcher.matches();
     }
 
-    static boolean matchStoreVariable(String opCode) {
-        String regex = "astore_(.*)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opCode);
-        return matcher.matches();
+    Map.Entry<Set<Integer>, Integer> analyseIfBranch(byte[] stream, int lineNumberStart, int lineNumberEnd) throws IOException {
+        Set<Integer> newUnsafeVars = new HashSet<>();
+
+        int i = lineNumberStart;
+        while (i < lineNumberEnd) {
+            var result = analyseOpCode(Const.getOpcodeName(stream[i] & 0xff), stream, i);
+            i = result.getValue();
+            newUnsafeVars.addAll(result.getKey());
+        }
+
+        int lastStepMove = analyseLastStep(stream, lineNumberEnd - 1);
+
+        return Map.entry(newUnsafeVars, lastStepMove);
     }
 
-    static boolean matchLoadVariable(String opCode) {
-        String regex = "aload_(.*)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opCode);
-        return matcher.matches();
+    int analyseLastStep(byte[] stream, int lineNumber) {
+        if (Const.getOpcodeName(stream[lineNumber]).equals("goto")) {
+            int branchbyte1 = stream[lineNumber + 1] & 0xff;
+            int branchbyte2 = stream[lineNumber + 2] & 0xff;
+            return (branchbyte1 << 8 | branchbyte2);
+        }
+        return lineNumber + 1;
     }
 
-    static boolean matchBinOperation(String opcode) {
-        return opcode.equals("iadd") || opcode.equals("imull");
-    }
 
-
-    static boolean matchLoadArrayElem(String opcode) {
-        return opcode.equals("aaload");
-    }
-
-    static boolean matchReturn(String opCode) {
-        return opCode.equals("return");
-    }
-
-    static int getNumberInOpCode(String opCode) {
+    int getNumberInOpCode(String opCode) {
         String regex = ".*_(.*)";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(opCode);
@@ -128,6 +150,7 @@ public class ClassFileAnalyser {
 
 
     public static void main(String[] args) {
-        matchStoreVariable("astore_1");
+        byte a = -57;
+        System.out.println(a & 0xff);
     }
 }

@@ -1,5 +1,6 @@
 package input;
 
+import analysis.ClassFileAnalyser;
 import org.apache.bcel.Const;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
@@ -12,12 +13,11 @@ import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-import static analysis.ClassFileAnalyser.analyseByteCodeOfMethod;
 
 public class JarBytecodeExtractor {
     public static void main(String[] args) {
 
-        String jarFilePath = "/Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/example.jar";
+        String jarFilePath = "/Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/example2.jar";
 
         try {
             JarFile jarFile = new JarFile(jarFilePath);
@@ -53,7 +53,8 @@ public class JarBytecodeExtractor {
 
                         if (m.getName().equals("main")) {
                             byte[] code = m.getCode().getCode();
-                            analyseByteCodeOfMethod(code);
+                            var analyser = new ClassFileAnalyser();
+                            analyser.analyseByteCodeOfMethod(code);
 
                         }
 
