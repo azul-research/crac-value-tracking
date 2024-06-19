@@ -10,14 +10,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 
 public class JarBytecodeExtractor {
-    public static void main(String[] args) {
+    public static Set<Integer> analyseJarFile(String jarFilePath) {
 
-        String jarFilePath = "/Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/example2.jar";
+//        String jarFilePath = "/Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/example2.jar";
 
         try {
             JarFile jarFile = new JarFile(jarFilePath);
@@ -56,6 +57,8 @@ public class JarBytecodeExtractor {
                             var analyser = new ClassFileAnalyser();
                             analyser.analyseByteCodeOfMethod(code);
 
+                            return analyser.getUnsafeVars();
+
                         }
 
                     }
@@ -82,6 +85,7 @@ public class JarBytecodeExtractor {
             throw new RuntimeException(e);
         }
 
+        return null;
     }
 
 }

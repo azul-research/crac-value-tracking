@@ -13,8 +13,12 @@ import static analysis.InstructionsMatcher.*;
 
 public class ClassFileAnalyser {
 
-    Stack<Boolean> stack = new Stack<>();
-    HashSet<Integer> unsafeVars = new HashSet<>(Set.of(0));
+    private Stack<Boolean> stack = new Stack<>();
+    private HashSet<Integer> unsafeVars = new HashSet<>(Set.of(0));
+
+    public Set<Integer> getUnsafeVars() {
+        return unsafeVars;
+    }
 
 
     public void analyseByteCodeOfMethod(byte[] methodCode) {
@@ -69,7 +73,14 @@ public class ClassFileAnalyser {
                 newUnsafeVars.add(varNumber);
             }
             lineNumber++;
-        } else if (matchLoadVariable(name)) {
+        } else if (matchStoreToVariable(name)) {
+            int varNumber = parseNextByte(stream, lineNumber);
+            if (!stack.pop()) {
+                newUnsafeVars.add(varNumber);
+            }
+            lineNumber += 2;
+        }
+        else if (matchLoadVariable(name)) {
             var varNumber = getNumberInOpCode(name);
             stack.add(!unsafeVars.contains(varNumber));
             lineNumber++;
@@ -85,7 +96,10 @@ public class ClassFileAnalyser {
             lineNumber++;
         } else if (matchIf(name)) {
             lineNumber = analyseIfBlock(stream, lineNumber, name);
-        } else if (!matchReturn(name)) {
+        } else if (matchGoto(name)) {
+            lineNumber = processGoto(stream, lineNumber, name);
+        }
+        else if (!matchReturn(name)) {
             System.out.println("UNKNOWN OPCODE: " + name);
             lineNumber++;
         } else {
@@ -94,6 +108,13 @@ public class ClassFileAnalyser {
 
         return Map.entry(newUnsafeVars, lineNumber);
 
+    }
+
+    int processGoto(byte[] stream, int lineNumber, String opCode) {
+
+        int branchbyte1 = stream[lineNumber + 1] & 0xff;
+        int branchbyte2 = stream[lineNumber + 2] & 0xff;
+        return (branchbyte1 << 8 | branchbyte2) + lineNumber;
     }
 
     int analyseIfBlock(byte[] stream, int lineNumber, String opCode) throws IOException {
@@ -152,5 +173,11 @@ public class ClassFileAnalyser {
     public static void main(String[] args) {
         byte a = -57;
         System.out.println(a & 0xff);
+    }
+
+
+    private int parseNextByte(byte[] stream, int lineNumber) {
+        return stream[lineNumber + 1] & 0xff;
+
     }
 }

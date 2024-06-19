@@ -27,6 +27,10 @@ public class InstructionsMatcher {
         return matcher.matches();
     }
 
+    static boolean matchStoreToVariable(String opCode) {
+        return opCode.equals("astore");
+    }
+
     static boolean matchLoadVariable(String opCode) {
         String regex = ".load_(.*)";
         Pattern pattern = Pattern.compile(regex);
@@ -45,5 +49,9 @@ public class InstructionsMatcher {
 
     static boolean matchReturn(String opCode) {
         return opCode.equals("return");
+    }
+
+    static boolean matchGoto(String opcode) {
+        return opcode.equals("goto");
     }
 }
