@@ -1,4 +1,4 @@
-package examples.nestedif;
+package examples.nestedif2;
 
 public class Main {
 
@@ -13,10 +13,10 @@ public class Main {
                 e = args[1];
             }
         }
-//        else {
-//            d = args[1];
-//
-//        }
+        else {
+            d = args[1];
+
+        }
 
     }
 }

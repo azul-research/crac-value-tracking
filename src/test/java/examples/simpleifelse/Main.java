@@ -8,11 +8,11 @@ public class Main {
         String c = "";
         if (b == null) {
             a = 1;
-            c = args[1];
+            c = "";
         }
         else {
             a = 2;
-            c = "";
+            c = args[1];
         }
     }
 }
