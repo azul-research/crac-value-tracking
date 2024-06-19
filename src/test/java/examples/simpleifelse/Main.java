@@ -1,4 +1,4 @@
-package example2;
+package examples.simpleifelse;
 
 public class Main {
 
@@ -7,9 +7,12 @@ public class Main {
         String b = args[1];
         String c = "";
         if (b == null) {
-            a = 2;
+            a = 1;
             c = args[1];
         }
-
+        else {
+            a = 2;
+            c = "";
+        }
     }
 }
