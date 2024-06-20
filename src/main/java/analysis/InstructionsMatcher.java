@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 
 public class InstructionsMatcher {
 
-    static boolean matchIf(String opCode) {
+    public static boolean matchIf(String opCode) {
         return opCode.startsWith("if");
     }
 
@@ -16,7 +16,7 @@ public class InstructionsMatcher {
         return matcher.matches();
     }
 
-    static boolean matchConstLoadFromPool(String opcode) {
+    public static boolean matchConstLoadFromPool(String opcode) {
         return opcode.equals("ldc");
     }
 
@@ -38,8 +38,11 @@ public class InstructionsMatcher {
         return matcher.matches();
     }
 
-    static boolean matchBinOperation(String opcode) {
-        return opcode.equals("iadd") || opcode.equals("imull");
+    static boolean matchBinOperation(String opCode) {
+        String regex = ".{1,2}(add|div|mul|sub)";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(opCode);
+        return matcher.matches();
     }
 
 
@@ -47,11 +50,11 @@ public class InstructionsMatcher {
         return opcode.equals("aaload");
     }
 
-    static boolean matchReturn(String opCode) {
+    public static boolean matchReturn(String opCode) {
         return opCode.equals("return");
     }
 
-    static boolean matchGoto(String opcode) {
+    public static boolean matchGoto(String opcode) {
         return opcode.equals("goto");
     }
 }

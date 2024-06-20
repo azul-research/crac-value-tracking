@@ -18,7 +18,17 @@ import java.util.jar.JarFile;
 public class JarBytecodeExtractor {
     public static Set<Integer> analyseJarFile(String jarFilePath) {
 
-//        String jarFilePath = "/Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/example2.jar";
+        byte[] code = getMainMethodCode(jarFilePath);
+        var analyser = new ClassFileAnalyser();
+        assert code != null;
+        analyser.analyseByteCodeOfMethod(code);
+
+        return analyser.getUnsafeVars();
+
+    }
+
+    public static byte[] getMainMethodCode(String jarFilePath) {
+
 
         try {
             JarFile jarFile = new JarFile(jarFilePath);
@@ -53,33 +63,19 @@ public class JarBytecodeExtractor {
 
 
                         if (m.getName().equals("main")) {
-                            byte[] code = m.getCode().getCode();
-                            var analyser = new ClassFileAnalyser();
-                            analyser.analyseByteCodeOfMethod(code);
-
-                            return analyser.getUnsafeVars();
+                            return m.getCode().getCode();
 
                         }
 
                     }
 
                     InputStream inputStream = jarFile.getInputStream(entry);
-//                byte[] bytecode = inputStream.readAllBytes();
                     inputStream.close();
                     jarFile.close();
-//
-//                System.out.println("Bytecode :");
-//           ¬     for (byte b : bytecode) {
-//                    System.out.printf("%02x ", b);
-//                }
-//                System.out.println();
+
                 }
 
             }
-
-
-
-
 
         } catch (IOException e) {
             throw new RuntimeException(e);
