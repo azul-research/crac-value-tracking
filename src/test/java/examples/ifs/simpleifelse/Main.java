@@ -1,4 +1,4 @@
-package examples.simpleifelse;
+package examples.ifs.simpleifelse;
 
 public class Main {
 

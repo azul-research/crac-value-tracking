@@ -14,7 +14,7 @@ public class ClassFileanalyserTest {
     @Test
     public void simpleIfTest() {
 
-        var result = analyseJarFile("src/test/java/examples/simpleif/simpleif.jar");
+        var result = analyseJarFile(getJarFilePath("simpleif"));
         System.out.println(result);
         assertEquals(result, Set.of(0, 1));
 
@@ -22,7 +22,7 @@ public class ClassFileanalyserTest {
 
     @Test
     public void simpleIfElseTest() {
-        var result = analyseJarFile("src/test/java/examples/simpleifelse/simpleifelse.jar");
+        var result = analyseJarFile(getJarFilePath("simpleifelse"));
         System.out.println(result);
 
         assertEquals(result, Set.of(0, 2, 3));
@@ -30,18 +30,41 @@ public class ClassFileanalyserTest {
 
     @Test
     public void nestedIfTest() {
-        var result = analyseJarFile("src/test/java/examples/nestedif/nestedif.jar");
+        var result = analyseJarFile(getJarFilePath("nestedif"));
         System.out.println(result);
 
-        assertEquals(result, Set.of(0, 1, 4));
+        assertEquals(Set.of(0, 1, 4), result);
     }
 
 
     @Test
     public void nestedIf2Test() {
-        var result = analyseJarFile("src/test/java/examples/nestedif2/nestedif2.jar");
+        var result = analyseJarFile(getJarFilePath("nestedif2"));
         System.out.println(result);
 
-        assertEquals(result, Set.of(0, 1, 3, 4));
+        assertEquals(Set.of(0, 1, 2, 3, 4), result);
     }
+
+    @Test
+    public void simpleAssignmentsTest() {
+        var result = analyseJarFile(getJarFilePath("simpleassignments"));
+
+        assertEquals(Set.of(0, 2), result);
+    }
+
+    @Test
+    public void nestedIf3Test() {
+        var result = analyseJarFile(getJarFilePath("nestedif3"));
+
+        assertEquals(Set.of(0, 1, 2, 3, 4), result);
+    }
+
+
+
+    private String getJarFilePath(String name) {
+        return "src/test/java/examples/"+ name + "/"+ name + ".jar";
+    }
+
+
+
 }

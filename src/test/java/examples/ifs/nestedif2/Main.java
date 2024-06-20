@@ -1,4 +1,4 @@
-package examples.nestedif;
+package examples.ifs.nestedif2;
 
 public class Main {
 
@@ -8,15 +8,16 @@ public class Main {
         String d = "";
         String e = "";
         if (b == null) {
-//            c = args[1];
             if (b == null) {
                 e = args[1];
+            } else {
+                c = args[1];
+
             }
+        } else {
+            d = args[1];
+
         }
-//        else {
-//            d = args[1];
-//
-//        }
 
     }
 }
