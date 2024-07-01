@@ -8,13 +8,21 @@ import java.util.*;
 
 public class ControlFlowGraph {
 
-    ClassPool pool;
+    private ClassPool pool;
 
-    Map<String, ClassControlFlowGraph> classesCFG = new HashMap<>();
+    private Map<String, ClassCFG> classesCFG = new HashMap<>();
+
+
+    public Map<String, ClassCFG> getCFG() {
+        return classesCFG;
+    }
+
+    public ClassCFG getClassCFG(String name) {
+        return classesCFG.get(name);
+    }
 
 
     public ControlFlowGraph(String jarFilePath) {
-
 
         try {
             pool = ClassPool.getDefault();
@@ -28,7 +36,7 @@ public class ControlFlowGraph {
     public void createClassCFG(String className) {
         try {
             CtClass ctClass = pool.get(className);
-            var classCFG = new ClassControlFlowGraph();
+            var classCFG = new ClassCFG();
             classesCFG.put(className, classCFG);
 
             for (CtMethod method : ctClass.getDeclaredMethods()) {

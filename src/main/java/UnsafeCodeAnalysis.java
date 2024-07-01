@@ -1,3 +1,4 @@
+import analysis.MethodAnalyser;
 import input.ControlFlowGraph;
 
 import java.util.ArrayList;
@@ -19,12 +20,13 @@ public class UnsafeCodeAnalysis {
         for (var className : classNames) {
             System.out.println("Name: " + getClassName(className));
             cfg.createClassCFG(getClassName(className));
-
         }
+
+        MethodAnalyser analyser = new MethodAnalyser(cfg.getClassCFG("example.pack.Main").getMethodCFG("main"));
+
 
 
     }
-
 
 
     public static String getClassName(String classPath) {
