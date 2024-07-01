@@ -178,6 +178,5 @@ public class ClassFileAnalyser {
 
     private int parseNextByte(byte[] stream, int lineNumber) {
         return stream[lineNumber + 1] & 0xff;
-
     }
 }

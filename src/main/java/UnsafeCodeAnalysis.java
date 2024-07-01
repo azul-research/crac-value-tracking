@@ -22,7 +22,14 @@ public class UnsafeCodeAnalysis {
             cfg.createClassCFG(getClassName(className));
         }
 
-        MethodAnalyser analyser = new MethodAnalyser(cfg.getClassCFG("example.pack.Main").getMethodCFG("main"));
+
+        String className = "example.pack.Main";
+        String methodName = "main";
+        var methodCFG = cfg.getClassCFG(className).getMethodCFG(methodName);
+        var method = cfg.getMethod(className, methodName);
+
+        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method);
+        analyser.analyse();
 
 
 
