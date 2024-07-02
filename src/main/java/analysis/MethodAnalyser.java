@@ -18,6 +18,8 @@ public class MethodAnalyser {
 
     Map<Integer, ControlFlow.Block> methodCFG;
 
+    ControlFlow.Block[] blocks;
+
     Map<Integer, CurrentState> currentBlocksStates;
     //    CtMethod method;
     CodeAttribute codeAttribute;
@@ -28,11 +30,17 @@ public class MethodAnalyser {
 
 
 
-    public MethodAnalyser(Map<Integer, ControlFlow.Block> methodCFG, CtMethod method) {
-        this.methodCFG = methodCFG;
+    public MethodAnalyser(ControlFlow.Block[] blocks, CtMethod method) {
+        this.blocks = blocks;
+
+        this.methodCFG = new HashMap<>();
+        for (var block : blocks) {
+            this.methodCFG.put(block.position(), block);
+        }
+
         codeAttribute = method.getMethodInfo().getCodeAttribute();
-        this.startBlock = Collections.min(methodCFG.keySet());
-        this.endBlock = Collections.max(methodCFG.keySet());
+        this.startBlock = Collections.min(this.methodCFG.keySet());
+        this.endBlock = Collections.max(this.methodCFG.keySet());
         System.out.println("Start block: " + startBlock + ", end block: " + endBlock);
 
         currentBlocksStates = new HashMap<>();
@@ -42,11 +50,20 @@ public class MethodAnalyser {
     }
 
     public void analyse() {
-        analyseBasicBlock(startBlock);
+
+        CurrentState previousState;
+        do {
+            previousState = currentBlocksStates.get(endBlock);
+            for (var block: blocks) {
+                analyseBasicBlock(block.position());
+            }
+        } while (previousState.equals(currentBlocksStates.get(endBlock)));
+
         System.out.println("The result is: " + currentBlocksStates.get(endBlock));
     }
 
     void analyseBasicBlock(int blockIndex) {
+        System.out.println("Analysing block: " + blockIndex);
         CurrentState state;
         if (blockIndex == startBlock) {
             state = CurrentState.getEmptyState();
@@ -58,11 +75,11 @@ public class MethodAnalyser {
 
         currentBlocksStates.put(blockIndex, state);
 
-        var block = methodCFG.get(blockIndex);
+//        var block = methodCFG.get(blockIndex);
 
-        for (int i = 0; i < block.exits(); i++) {
-            analyseBasicBlock(block.exit(i).position());
-        }
+//        for (int i = 0; i < block.exits(); i++) {
+//            analyseBasicBlock(block.exit(i).position());
+//        }
 
 
     }
