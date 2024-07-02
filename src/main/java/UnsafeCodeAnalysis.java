@@ -10,7 +10,14 @@ import static input.JarBytecodeExtractor.extractJarFile;
 public class UnsafeCodeAnalysis {
     public static void main(String[] args) {
 
-        String jarFilePath = "/Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/main.jar";
+        if (args.length < 2) {
+            System.out.println("""
+                    Not enough arguments:\s
+                    first argument - path to .jar file,\s
+                    second argument - full name of Main class""");
+        }
+
+        String jarFilePath = args[0];
         var classNames = extractJarFile(jarFilePath);
 
         System.out.println("Class names: " + classNames);
@@ -23,7 +30,7 @@ public class UnsafeCodeAnalysis {
         }
 
 
-        String className = "example.pack.Main";
+        String className = args[1];
         String methodName = "main";
         var methodCFG = cfg.getClassCFG(className).getMethodCFG(methodName);
         var method = cfg.getMethod(className, methodName);

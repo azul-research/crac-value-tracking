@@ -7,7 +7,6 @@ public class Main {
         int i = 5;
         while (i > 0) {
             i++;
-
             if (i == 5) {
                 b = args[i];
             }
@@ -15,11 +14,9 @@ public class Main {
                 c = args[i];
             }
         }
-        c = "";
-
-
-
-
+//        c = "";
     }
+
+
 
 }
