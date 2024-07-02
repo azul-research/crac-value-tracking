@@ -1,7 +1,7 @@
 import analysis.MethodAnalyser;
 import input.ControlFlowGraph;
 
-import java.util.ArrayList;
+
 import java.util.Arrays;
 import java.util.Objects;
 
