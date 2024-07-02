@@ -1,11 +1,14 @@
 package analysis;
 
 import javassist.CtMethod;
+import javassist.NotFoundException;
 import javassist.bytecode.CodeAttribute;
 import javassist.bytecode.CodeIterator;
+import javassist.bytecode.LocalVariableAttribute;
 import javassist.bytecode.Mnemonic;
 import javassist.bytecode.analysis.ControlFlow;
 import output.CurrentState;
+import output.Value;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -26,12 +29,16 @@ public class MethodAnalyser {
     int startBlock;
     int endBlock;
 
+    Set<Integer> startingDerivatives;
+
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
 
 
-    public MethodAnalyser(ControlFlow.Block[] blocks, CtMethod method) {
+    public MethodAnalyser(ControlFlow.Block[] blocks, CtMethod method, Set<Integer> derivativeVars)  {
+        startingDerivatives = derivativeVars;
         this.blocks = blocks;
+
 
         this.methodCFG = new HashMap<>();
         for (var block : blocks) {
@@ -48,6 +55,20 @@ public class MethodAnalyser {
         for (var index : methodCFG.keySet()) {
             currentBlocksStates.put(index, CurrentState.getEmptyState());
         }
+
+
+        int numOfVars = codeAttribute.getMaxLocals();
+        System.out.println("Number of local variables: " + numOfVars);
+
+        try {
+            int numOfInputVars = method.getParameterTypes().length;
+            System.out.println("Number of parameters: " + numOfInputVars);
+
+        } catch (NotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+
     }
 
     public void analyse() {
@@ -72,7 +93,6 @@ public class MethodAnalyser {
         CurrentState state;
         if (blockIndex == startBlock) {
             state = CurrentState.getEmptyState();
-            state.addVariable(0);
         } else {
             state = getStartingState(blockIndex);
         }
@@ -86,32 +106,32 @@ public class MethodAnalyser {
     void analyseCode(CurrentState state, int blockIndex) {
 
         int blockEnd = methodCFG.get(blockIndex).length() + blockIndex;
-        var code = codeAttribute.getCode();
+//        var code = codeAttribute.getCode();
         var iterator = codeAttribute.iterator();
         int index = blockIndex;
 
-        Stack<Boolean> stack = new Stack<>();
+        Stack<Value> stack = new Stack<>();
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
             String name =  Mnemonic.OPCODE[opcode];
             System.out.println("Instruction at index " + index + ": " + name);
 
             if (matchConstLoad(name)) {
-                stack.add(true);
+                stack.add(new Value(Value.Type.NON_DERIVATIVE, List.of()));
             } else if (matchConstLoadFromPool(name)) {
-                stack.add(true);
+                stack.add(new Value(Value.Type.NON_DERIVATIVE, List.of()));
             } else if (matchStoreData(name)) {
                 var varNumber = getNumberInOpCode(name);
-                if (!stack.pop()) {
-                    state.addVariable(varNumber);
+                if (stack.pop().type().equals(Value.Type.DERIVATIVE)) {
+                    state.addVariable(varNumber, 0);
                 }
                 else {
-                    state.removeVariable(varNumber);
+//                    state.removeVariable(varNumber);
                 }
             } else if (matchStoreToVariable(name)) {
                 int varNumber = parseNextByte(iterator, index);
                 if (!stack.pop()) {
-                    state.addVariable(varNumber);
+                    state.addVariable(varNumber, 0);
                 }
             }
             else if (matchLoadVariable(name)) {
@@ -132,10 +152,7 @@ public class MethodAnalyser {
             index += opcodeLength[opcode];
 
         }
-
-
     }
-
 
 
     CurrentState getStartingState(int index) {

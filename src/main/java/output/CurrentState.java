@@ -1,39 +1,58 @@
 package output;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 public class CurrentState {
 
 
+    List<Derivative> derivatives;
+
+
     Set<Integer> variables;
+
+    Set<Value>[] variablesArray;
 
 
     Set<Integer> getVariables() {
         return variables;
     }
 
-    CurrentState(Set<Integer> variables) {
-        this.variables = variables;
+    Set<Value>[] getVariablesArray() {
+        return variablesArray;
     }
 
-    public static CurrentState getEmptyState() {
-        return new CurrentState(new HashSet<>());
+    public CurrentState(Set<Value>[] variables) {
+        this.variablesArray = variables;
+
+    }
+
+    public static CurrentState getEmptyState(int numberOfVars, Set<Integer> derivatives) {
+        Set<Value>[] vars = new Set[numberOfVars];
+        for (int i = 0; i < numberOfVars; i++) {
+            if (derivatives.contains(i)) {
+                vars[i] = new HashSet<>(Set.of(new Value(Value.Type.DERIVATIVE, List.of(), true)));
+            }
+            else {
+                vars[i] = new HashSet<>(Set.of(new Value(Value.Type.UNDEFINED, List.of(), true)));
+            }
+        }
+        return new CurrentState(vars);
     }
 
 
     public void mergeWith(CurrentState st1) {
-        variables.addAll(st1.getVariables());
+        var newVariablesArray = st1.getVariablesArray();
+        for (int i = 0 ; i < variablesArray.length; i++) {
+            variablesArray[i].addAll(newVariablesArray[i]);
+        }
     }
 
-
-    public void addVariable(Integer var) {
-        variables.add(var);
+    public void updateVariable(Integer number, Set<Value> newValue) {
+        variablesArray[number] = newValue;
     }
 
-    public boolean containsVariable(Integer var) {
-        return variables.contains(var);
+    public boolean isDerivative(Integer var) {
+        return variablesArray[var].stream().anyMatch(a -> a.type().equals(Value.Type.DERIVATIVE));
     }
 
     public void removeVariable(Integer var) {

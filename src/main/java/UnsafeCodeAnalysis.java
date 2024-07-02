@@ -4,6 +4,7 @@ import input.ControlFlowGraph;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Set;
 
 import static input.JarBytecodeExtractor.extractJarFile;
 
@@ -35,7 +36,7 @@ public class UnsafeCodeAnalysis {
         var methodCFG = cfg.getClassCFG(className).getMethodCFG(methodName);
         var method = cfg.getMethod(className, methodName);
 
-        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method);
+        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, Set.of(0));
         analyser.analyse();
 
 
