@@ -62,7 +62,7 @@ public class MethodAnalyser {
             for (var block: blocks) {
                 analyseBasicBlock(block.position());
             }
-        } while (previousState.equals(currentBlocksStates.get(endBlock)));
+        } while (!previousState.equals(currentBlocksStates.get(endBlock)));
 
         System.out.println("The result is: " + currentBlocksStates.get(endBlock));
     }
