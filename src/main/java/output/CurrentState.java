@@ -36,6 +36,10 @@ public class CurrentState {
         return variables.contains(var);
     }
 
+    public void removeVariable(Integer var) {
+        variables.remove(var);
+    }
+
 
     @Override
     public String toString() {

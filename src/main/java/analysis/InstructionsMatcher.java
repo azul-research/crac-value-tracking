@@ -28,7 +28,10 @@ public class InstructionsMatcher {
     }
 
     static boolean matchStoreToVariable(String opCode) {
-        return opCode.equals("astore");
+        String regex = ".store";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(opCode);
+        return matcher.matches();
     }
 
     static boolean matchLoadVariable(String opCode) {

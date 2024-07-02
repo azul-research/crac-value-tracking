@@ -41,6 +41,7 @@ public class MethodAnalyser {
         codeAttribute = method.getMethodInfo().getCodeAttribute();
         this.startBlock = Collections.min(this.methodCFG.keySet());
         this.endBlock = Collections.max(this.methodCFG.keySet());
+
         System.out.println("Start block: " + startBlock + ", end block: " + endBlock);
 
         currentBlocksStates = new HashMap<>();
@@ -50,6 +51,10 @@ public class MethodAnalyser {
     }
 
     public void analyse() {
+
+        for (var block: blocks) {
+            analyseBasicBlock(block.position());
+        }
 
         CurrentState previousState;
         do {
@@ -74,12 +79,6 @@ public class MethodAnalyser {
         analyseCode(state, blockIndex);
 
         currentBlocksStates.put(blockIndex, state);
-
-//        var block = methodCFG.get(blockIndex);
-
-//        for (int i = 0; i < block.exits(); i++) {
-//            analyseBasicBlock(block.exit(i).position());
-//        }
 
 
     }
@@ -106,6 +105,9 @@ public class MethodAnalyser {
                 if (!stack.pop()) {
                     state.addVariable(varNumber);
                 }
+                else {
+                    state.removeVariable(varNumber);
+                }
             } else if (matchStoreToVariable(name)) {
                 int varNumber = parseNextByte(iterator, index);
                 if (!stack.pop()) {
@@ -123,13 +125,11 @@ public class MethodAnalyser {
                 stack.pop();
                 var isSafe = stack.pop();
                 stack.add(isSafe);
-            }
-            else if (!matchReturn(name)) {
+            } else if (!matchReturn(name)) {
                 System.out.println("UNKNOWN OPCODE: " + name);
             }
 
             index += opcodeLength[opcode];
-
 
         }
 
