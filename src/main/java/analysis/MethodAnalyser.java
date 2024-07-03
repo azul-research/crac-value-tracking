@@ -1,10 +1,11 @@
 package analysis;
 
+import entitites.DerivativeEntity;
+import entitites.Entity;
+import entitites.NonDerivativeEntity;
+import entitites.StraightDerivative;
 import javassist.CtMethod;
-import javassist.NotFoundException;
-import javassist.bytecode.CodeAttribute;
-import javassist.bytecode.CodeIterator;
-import javassist.bytecode.Mnemonic;
+import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
 import output.CurrentState;
 import output.Value;
@@ -15,6 +16,7 @@ import java.util.regex.Pattern;
 
 import static analysis.InstructionsMatcher.*;
 import static analysis.InstructionsMatcher.matchReturn;
+import static entitites.NonDerivativeEntity.createNonDerivative;
 
 public class MethodAnalyser {
 
@@ -28,46 +30,72 @@ public class MethodAnalyser {
     int startBlock;
     int endBlock;
     int numOfVars;
+    String fileName;
 
-    Set<Integer> startingDerivatives;
+    Map<Integer, String> startingDerivatives;
 
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
+    String getVarName(int i) {
+        var attribute = (LocalVariableAttribute) codeAttribute.getAttribute(LocalVariableAttribute.tag);
+        return attribute.variableName(i);
+    }
 
+    Integer getLineNumber(int i) { // i - number of bytecode instruction in method
+        var attribute = (LineNumberAttribute) codeAttribute.getAttribute(LineNumberAttribute.tag);
+        return attribute.toLineNumber(i);
 
-    public MethodAnalyser(ControlFlow.Block[] blocks, CtMethod method, Set<Integer> derivativeVars)  {
-        this.startingDerivatives = derivativeVars;
-        this.blocks = blocks;
+    }
 
+    private void setFileName(CtMethod method) {
+        var sourceFileAttribute = (SourceFileAttribute) method.getDeclaringClass().getClassFile().getAttribute(SourceFileAttribute.tag);
+        this.fileName = sourceFileAttribute.getFileName();
+    }
 
+    private void setMethodCFG(ControlFlow.Block[] cfgBlocks) {
         this.methodCFG = new HashMap<>();
-        for (var block : blocks) {
+        for (var block : cfgBlocks) {
             this.methodCFG.put(block.position(), block);
         }
+    }
 
-        codeAttribute = method.getMethodInfo().getCodeAttribute();
-        this.startBlock = Collections.min(this.methodCFG.keySet());
-        this.endBlock = Collections.max(this.methodCFG.keySet());
-
-        System.out.println("Start block: " + startBlock + ", end block: " + endBlock);
-
-
-        this.numOfVars = codeAttribute.getMaxLocals();
-        System.out.println("Number of local variables: " + numOfVars);
-
-
+    private void setCurrentBlocksStates(int numOfVars, Map<Integer, String> derivativeVars) {
         currentBlocksStates = new HashMap<>();
         for (var index : methodCFG.keySet()) {
             currentBlocksStates.put(index, CurrentState.getEmptyState(numOfVars, derivativeVars));
         }
+    }
 
-        try {
-            int numOfInputVars = method.getParameterTypes().length;
-            System.out.println("Number of parameters: " + numOfInputVars);
-
-        } catch (NotFoundException e) {
-            throw new RuntimeException(e);
+    private void setStartingDerivatives(Set<Integer> derivativeVar) {
+        this.startingDerivatives = new HashMap<>();
+        var iter = derivativeVar.iterator();
+        int index;
+        while (iter.hasNext()) {
+            index = iter.next();
+            startingDerivatives.put(index, getVarName(index));
         }
+
+    }
+    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtMethod method, Set<Integer> derivativeVars)  {
+
+        this.codeAttribute = method.getMethodInfo().getCodeAttribute();
+        setFileName(method);
+
+        setStartingDerivatives(derivativeVars);
+        setMethodCFG(cfgBlocks);
+
+        this.blocks = cfgBlocks;
+        this.startBlock = Collections.min(this.methodCFG.keySet());
+        this.endBlock = Collections.max(this.methodCFG.keySet());
+
+
+        System.out.println("Start block: " + startBlock + ", end block: " + endBlock);
+
+        this.numOfVars = codeAttribute.getMaxLocals();
+
+        setCurrentBlocksStates(numOfVars, this.startingDerivatives);
+
+        System.out.println("Number of local variables: " + numOfVars);
 
 
     }
@@ -86,7 +114,15 @@ public class MethodAnalyser {
             }
         } while (!previousState.equals(currentBlocksStates.get(endBlock)));
 
-        System.out.println("The result is: " + currentBlocksStates.get(endBlock));
+
+        System.out.println();
+        System.out.println("Variables at the end of the method:");
+        for (int i = 0; i < numOfVars; i++) {
+            System.out.print(getVarName(i) + ": ");
+            currentBlocksStates.get(endBlock).getVarValue(i).print(0);
+        }
+
+
     }
 
     void analyseBasicBlock(int blockIndex) {
@@ -102,6 +138,7 @@ public class MethodAnalyser {
         currentBlocksStates.put(blockIndex, state);
 
 
+
     }
 
     void analyseCode(CurrentState state, int blockIndex) {
@@ -111,48 +148,51 @@ public class MethodAnalyser {
         var iterator = codeAttribute.iterator();
         int index = blockIndex;
 
-        Stack<Set<Value>> stack = new Stack<>();
+        Stack<Entity> stack = new Stack<>();
+
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
             String name =  Mnemonic.OPCODE[opcode];
+            System.out.println(fileName + ":" + getLineNumber(index));
             System.out.println("Instruction at index " + index + ": " + name);
 
-            if (matchConstLoad(name)) {
-                stack.add(createNonDerivative());
-            } else if (matchConstLoadFromPool(name)) {
-                stack.add(createNonDerivative());
+            if (matchConstLoad(name) || matchConstLoadFromPool(name)) {
+                stack.add(createNonDerivative(getLineNumber(index)));
             } else if (matchStoreData(name)) {
                 var varNumber = getNumberInOpCode(name);
                 var valueOnStack = stack.pop();
-                if (canBeDerivative(valueOnStack)) {
-                    state.updateVariable(varNumber, createSuccessor(valueOnStack));
+                if (valueOnStack.isDerivative()) {
+                    state.updateVariable(varNumber, createSuccessor((DerivativeEntity) valueOnStack, getLineNumber(index)));
                 }
                 else {
-                    state.updateVariable(varNumber, Set.of(new Value(Value.Type.NON_DERIVATIVE, List.of(), false)));
+                    state.updateVariable(varNumber, createNonDerivative(getLineNumber(index)));
                 }
             } else if (matchStoreToVariable(name)) {
                 int varNumber = parseNextByte(iterator, index);
                 var valueOnStack = stack.pop();
-                if (canBeDerivative(valueOnStack)) {
-                    state.updateVariable(varNumber, createSuccessor(valueOnStack));
+                if (valueOnStack.isDerivative()) {
+                    state.updateVariable(varNumber, createSuccessor((DerivativeEntity) valueOnStack, getLineNumber(index)));
                 }
                 else {
-                    state.updateVariable(varNumber, Set.of(new Value(Value.Type.NON_DERIVATIVE, List.of(), false)));
+                    state.updateVariable(varNumber, createNonDerivative(getLineNumber(index)));
                 }
             }
+
             else if (matchLoadVariable(name)) {
                 var varNumber = getNumberInOpCode(name);
                 stack.add(state.getVarValue(varNumber));
-            } else if (matchBinOperation(name)) {
-                var first = stack.pop();
-                var second = stack.pop();
 
-                stack.add(createMergedSuccessor(first, second));
-            } else if (matchLoadArrayElem(name)) {
-                stack.pop();
-                var isSafe = stack.pop();
-                stack.add(isSafe);
-            } else if (!matchReturn(name)) {
+            }  else if (matchLoadArrayElem(name)) {
+                var arrayIndex = stack.pop();
+                var valueOnStack = stack.pop();
+                stack.add(valueOnStack);
+//            } else if (matchBinOperation(name)) {
+//                var first = stack.pop();
+//                var second = stack.pop();
+//
+//                stack.add(createMergedSuccessor(first, second));
+            }
+            else if (!matchReturn(name)) {
                 System.out.println("UNKNOWN OPCODE: " + name);
             }
 
@@ -162,60 +202,48 @@ public class MethodAnalyser {
     }
 
 
-    Set<Value> createMergedSuccessor(Set<Value> values1, Set<Value> values2) {
-        var iterator1 = values1.iterator();
-        var iterator2 = values2.iterator();
+//    Set<Value> createMergedSuccessor(Set<Value> values1, Set<Value> values2) {
+//        var iterator1 = values1.iterator();
+//        var iterator2 = values2.iterator();
+//
+//        Set<Value> result = new HashSet<>();
+//
+//        Value value1, value2;
+//        while (iterator1.hasNext()) {
+//            value1 = iterator1.next();
+//            while (iterator2.hasNext()) {
+//                value2 = iterator2.next();
+//                if (value1.isDerivative() && value2.isDerivative()) {
+//                    result.add(new Value(Value.Type.DERIVATIVE, List.of(value1, value2), false));
+//                }
+//                else if (value1.isDerivative()) {
+//                    result.add(new Value(Value.Type.DERIVATIVE, List.of(value1), false));
+//                }
+//                else if (value2.isDerivative()) {
+//                    result.add(new Value(Value.Type.DERIVATIVE, List.of(value2), false));
+//                }
+//                else {
+//                    result.add(new Value(Value.Type.NON_DERIVATIVE, List.of(), false));
+//
+//                }
+//            }
+//        }
+//
+//        return result;
+//    }
 
-        Set<Value> result = new HashSet<>();
+//    boolean canBeDerivative(Set<Value> values) {
+//        return values.stream().anyMatch(Value::isDerivative);
+//    }
 
-        Value value1, value2;
-        while (iterator1.hasNext()) {
-            value1 = iterator1.next();
-            while (iterator2.hasNext()) {
-                value2 = iterator2.next();
-                if (value1.isDerivative() && value2.isDerivative()) {
-                    result.add(new Value(Value.Type.DERIVATIVE, List.of(value1, value2), false));
-                }
-                else if (value1.isDerivative()) {
-                    result.add(new Value(Value.Type.DERIVATIVE, List.of(value1), false));
-                }
-                else if (value2.isDerivative()) {
-                    result.add(new Value(Value.Type.DERIVATIVE, List.of(value2), false));
-                }
-                else {
-                    result.add(new Value(Value.Type.NON_DERIVATIVE, List.of(), false));
-
-                }
-            }
-        }
-
-        return result;
+    Entity createNonDerivative(int line) {
+        return new NonDerivativeEntity(line);
     }
 
-    boolean canBeDerivative(Set<Value> values) {
-        return values.stream().anyMatch(Value::isDerivative);
-    }
+    DerivativeEntity createSuccessor(DerivativeEntity oldValue, int line) {
+        return new StraightDerivative(line, oldValue);
 
-    Set<Value> createNonDerivative() {
-        return Set.of(new Value(Value.Type.NON_DERIVATIVE, List.of(), false));
-    }
 
-    Set<Value> createSuccessor(Set<Value> oldValues) {
-        Set<Value> newValues = new HashSet<>();
-
-        var iterator = oldValues.iterator();
-        Value value;
-        while (iterator.hasNext()) {
-            value = iterator.next();
-            if (value.isDerivative()) {
-                newValues.add(new Value(Value.Type.DERIVATIVE, List.of(value), false));
-            }
-            else if (value.isNonDerivative()){
-                newValues.add(value);
-            }
-        }
-
-        return newValues;
     }
 
     CurrentState getStartingState(int index) {
@@ -230,10 +258,11 @@ public class MethodAnalyser {
     }
 
     private CurrentState mergeCurStates(List<ControlFlow.Block> blocks) {
-        if (blocks.isEmpty()) {
-            return CurrentState.getEmptyState(numOfVars, startingDerivatives);
-        }
         CurrentState state = CurrentState.getEmptyState(numOfVars, startingDerivatives);
+
+        if (blocks.isEmpty()) {
+            return state;
+        }
         for (var block : blocks) {
             state.mergeWith(currentBlocksStates.get(block.position()));
         }

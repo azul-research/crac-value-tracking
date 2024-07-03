@@ -14,9 +14,5 @@ public class Main {
                 c = args[i];
             }
         }
-//        c = "";
     }
-
-
-
 }

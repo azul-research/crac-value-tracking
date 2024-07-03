@@ -1,5 +1,7 @@
 package output;
 
+import entitites.*;
+
 import java.util.*;
 
 public class CurrentState {
@@ -7,30 +9,29 @@ public class CurrentState {
 
 //    Set<Integer> variables;
 
-    Set<Value>[] variablesArray;
+//    Set<Value>[] variablesArray;
+
+    Entity[] variablesArray;
 
 
-    Set<Value>[] getVariables() {
+    Entity[] getVariablesArray() {
         return variablesArray;
     }
 
-    Set<Value>[] getVariablesArray() {
-        return variablesArray;
-    }
-
-    public CurrentState(Set<Value>[] variables) {
+    public CurrentState(Entity[] variables) {
         this.variablesArray = variables;
 
     }
 
-    public static CurrentState getEmptyState(int numberOfVars, Set<Integer> derivatives) {
-        Set<Value>[] vars = new Set[numberOfVars];
+    public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives) {
+        Entity[] vars = new Entity[numberOfVars];
+
         for (int i = 0; i < numberOfVars; i++) {
-            if (derivatives.contains(i)) {
-                vars[i] = new HashSet<>(Set.of(new Value(Value.Type.DERIVATIVE, List.of(), true)));
+            if (derivatives.containsKey(i)) {
+                vars[i] = new RootDerivative(derivatives.get(i));
             }
             else {
-                vars[i] = new HashSet<>(Set.of(new Value(Value.Type.UNDEFINED, List.of(), true)));
+                vars[i] = new UndefinedEntity();
             }
         }
         return new CurrentState(vars);
@@ -39,36 +40,44 @@ public class CurrentState {
 
     public void mergeWith(CurrentState st1) {
         var newVariablesArray = st1.getVariablesArray();
-        for (int i = 0 ; i < variablesArray.length; i++) {
-            variablesArray[i].addAll(newVariablesArray[i]);
+        Entity derivativeA;
+        Entity derivativeB;
+        Entity newEntity;
+        for (int i = 0; i < variablesArray.length; i++) {
+            derivativeA = variablesArray[i];
+            derivativeB = newVariablesArray[i];
+
+            if (!derivativeA.equals(derivativeB)) {
+                if (derivativeA.isUndefined()) {
+                    newEntity = derivativeB;
+                } else if (derivativeB.isUndefined()) {
+                    newEntity = derivativeA;
+                }  else if (derivativeA.isNonDerivative()) {
+                    newEntity = derivativeB;
+                } else if (derivativeB.isNonDerivative()) {
+                    newEntity = derivativeA;
+                } else {
+                    newEntity = new PhiDerivative(0, (DerivativeEntity) derivativeA, (DerivativeEntity) derivativeB);
+                }
+            }
+            else {
+                newEntity = variablesArray[i];
+            }
+            variablesArray[i] = newEntity;
+
         }
     }
 
-    public void updateVariable(Integer number, Set<Value> newValue) {
+    public void updateVariable(Integer number, Entity newValue) {
         variablesArray[number] = newValue;
     }
 
     public boolean isDerivative(Integer var) {
-        return variablesArray[var].stream().anyMatch(Value::isDerivative);
+        return variablesArray[var].isDerivative();
     }
 
-
-    public Set<Value> getVarValue(int var) {
+    public Entity getVarValue(int var) {
         return variablesArray[var];
-    }
-
-
-    @Override
-    public String toString() {
-
-        StringBuilder result = new StringBuilder();
-        result.append("State of variables:\n");
-        for (int i = 0; i < variablesArray.length; i++) {
-            result.append(i).append(": ");
-            result.append(variablesArray[i].toString());
-            result.append("\n");
-        }
-        return result.toString();
     }
 
 
@@ -77,11 +86,11 @@ public class CurrentState {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CurrentState state = (CurrentState) o;
-        return Arrays.equals(variablesArray, state.variablesArray);
+        return Objects.deepEquals(variablesArray, state.variablesArray);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(variablesArray);
+        return Arrays.hashCode(variablesArray);
     }
 }
