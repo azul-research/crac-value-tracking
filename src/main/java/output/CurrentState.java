@@ -5,16 +5,13 @@ import java.util.*;
 public class CurrentState {
 
 
-    List<Derivative> derivatives;
-
-
-    Set<Integer> variables;
+//    Set<Integer> variables;
 
     Set<Value>[] variablesArray;
 
 
-    Set<Integer> getVariables() {
-        return variables;
+    Set<Value>[] getVariables() {
+        return variablesArray;
     }
 
     Set<Value>[] getVariablesArray() {
@@ -52,17 +49,26 @@ public class CurrentState {
     }
 
     public boolean isDerivative(Integer var) {
-        return variablesArray[var].stream().anyMatch(a -> a.type().equals(Value.Type.DERIVATIVE));
+        return variablesArray[var].stream().anyMatch(Value::isDerivative);
     }
 
-    public void removeVariable(Integer var) {
-        variables.remove(var);
+
+    public Set<Value> getVarValue(int var) {
+        return variablesArray[var];
     }
 
 
     @Override
     public String toString() {
-        return variables.toString();
+
+        StringBuilder result = new StringBuilder();
+        result.append("State of variables:\n");
+        for (int i = 0; i < variablesArray.length; i++) {
+            result.append(i).append(": ");
+            result.append(variablesArray[i].toString());
+            result.append("\n");
+        }
+        return result.toString();
     }
 
 
@@ -71,11 +77,11 @@ public class CurrentState {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CurrentState state = (CurrentState) o;
-        return Objects.equals(variables, state.variables);
+        return Arrays.equals(variablesArray, state.variablesArray);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(variables);
+        return Objects.hashCode(variablesArray);
     }
 }

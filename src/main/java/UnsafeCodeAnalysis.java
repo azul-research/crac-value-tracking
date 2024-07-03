@@ -16,6 +16,7 @@ public class UnsafeCodeAnalysis {
                     Not enough arguments:\s
                     first argument - path to .jar file,\s
                     second argument - full name of Main class""");
+            return;
         }
 
         String jarFilePath = args[0];
@@ -38,8 +39,6 @@ public class UnsafeCodeAnalysis {
 
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, Set.of(0));
         analyser.analyse();
-
-
 
     }
 
