@@ -10,7 +10,7 @@ public class CurrentState {
     Entity[] variablesArray;
 
 
-    Entity[] getVariablesArray() {
+    public Entity[] getVariablesArray() {
         return variablesArray;
     }
 
@@ -80,7 +80,7 @@ public class CurrentState {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CurrentState state = (CurrentState) o;
-        return Arrays.equals(variablesArray, state.variablesArray);
+        return Objects.deepEquals(variablesArray, state.variablesArray);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package entitites;
 
+import java.util.Objects;
+
 public class RootDerivative extends DerivativeEntity {
     String name;
     public RootDerivative(String name, DerivativeEntity... derivatives) {
@@ -14,5 +16,17 @@ public class RootDerivative extends DerivativeEntity {
     }
 
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        RootDerivative that = (RootDerivative) o;
+        return name.equals(that.name);
+    }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), name);
+    }
 }

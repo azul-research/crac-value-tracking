@@ -5,7 +5,6 @@ import javassist.CtMethod;
 import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
 import output.CurrentState;
-import output.Value;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -98,19 +97,21 @@ public class MethodAnalyser {
 
     public void analyse() {
 
+
+
         for (var block: blocks) {
             analyseBasicBlock(block.position());
         }
 
-//        for (var block: blocks) {
-//            analyseBasicBlock(block.position());
-//        }
+
 
         CurrentState previousState;
         do {
             previousState = currentBlocksStates.get(endBlock);
             for (var block: blocks) {
-                analyseBasicBlock(block.position());
+                if (block.position() != startBlock) {
+                    analyseBasicBlock(block.position());
+                }
             }
         } while (!previousState.equals(currentBlocksStates.get(endBlock)));
 
@@ -162,7 +163,7 @@ public class MethodAnalyser {
                 var varNumber = getNumberInOpCode(name);
                 var valueOnStack = stack.pop();
                 if (valueOnStack.isDerivative()) {
-                    state.updateVariable(varNumber, createSuccessor((DerivativeEntity) valueOnStack, getLineNumber(index)));
+                    state.updateVariable(varNumber, createSuccessor( valueOnStack, getLineNumber(index)));
                 }
                 else {
                     state.updateVariable(varNumber, createNonDerivative(getLineNumber(index)));
@@ -171,7 +172,7 @@ public class MethodAnalyser {
                 int varNumber = parseNextByte(iterator, index);
                 var valueOnStack = stack.pop();
                 if (valueOnStack.isDerivative()) {
-                    state.updateVariable(varNumber, createSuccessor((DerivativeEntity) valueOnStack, getLineNumber(index)));
+                    state.updateVariable(varNumber, createSuccessor( valueOnStack, getLineNumber(index)));
                 }
                 else {
                     state.updateVariable(varNumber, createNonDerivative(getLineNumber(index)));
@@ -192,7 +193,7 @@ public class MethodAnalyser {
 //
 //                stack.add(createMergedSuccessor(first, second));
             }
-            else if (!matchReturn(name)) {
+            else if (!matchReturn(name) && ! matchIf(name) && !matchGoto(name)) {
                 System.out.println("UNKNOWN OPCODE: " + name);
             }
 
@@ -240,7 +241,7 @@ public class MethodAnalyser {
         return new NonDerivativeEntity(line);
     }
 
-    DerivativeEntity createSuccessor(DerivativeEntity oldValue, int line) {
+    DerivativeEntity createSuccessor(Entity oldValue, int line) {
         return new StraightDerivative(line, oldValue);
 
 
@@ -258,14 +259,39 @@ public class MethodAnalyser {
     }
 
     private CurrentState mergeCurStates(List<ControlFlow.Block> blocks) {
+
+        if (blocks.size() == 1) {
+            return currentBlocksStates.get(blocks.getFirst().position());
+        }
         CurrentState state = CurrentState.getEmptyState(numOfVars, startingDerivatives);
 
         if (blocks.isEmpty()) {
             return state;
         }
-        for (var block : blocks) {
-            state.mergeWith(currentBlocksStates.get(block.position()));
+
+        for (int i = 0; i < numOfVars; i++) {
+            ArrayList<Entity> predecessors = new ArrayList<>();
+            Set<Entity> predecessorsSet = new HashSet<>();
+
+            for (var bl : blocks) {
+                Entity entity = currentBlocksStates.get(bl.position()).getVarValue(i);
+                if (!entity.isUndefined() && !predecessorsSet.contains(entity)) {
+                    predecessorsSet.add(entity);
+                    predecessors.add(entity);
+                }
+
+                if (predecessors.size() == 1) {
+                    state.updateVariable(i, predecessors.getFirst());
+                }
+                else {
+                    state.updateVariable(i, new PhiDerivative(0, predecessors.toArray(Entity[]::new)));
+
+                }
+                }
+
+
         }
+
         return state;
     }
 
