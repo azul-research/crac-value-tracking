@@ -10,4 +10,10 @@ public class StraightDerivative extends DerivativeEntity {
         System.out.println("\t".repeat(tabNumber) + "assigned to derivative on line " + this.line + ":");
         this.predecessors[0].print(tabNumber + 1);
     }
+
+
+    @Override
+    public boolean equals(Object o) {
+        return super.equals(o);
+    }
 }

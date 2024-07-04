@@ -7,10 +7,6 @@ import java.util.*;
 public class CurrentState {
 
 
-//    Set<Integer> variables;
-
-//    Set<Value>[] variablesArray;
-
     Entity[] variablesArray;
 
 
@@ -52,12 +48,10 @@ public class CurrentState {
                     newEntity = derivativeB;
                 } else if (derivativeB.isUndefined()) {
                     newEntity = derivativeA;
-                }  else if (derivativeA.isNonDerivative()) {
-                    newEntity = derivativeB;
-                } else if (derivativeB.isNonDerivative()) {
-                    newEntity = derivativeA;
+                } else if (derivativeA.isNonDerivative() && derivativeB.isNonDerivative()) {
+                    newEntity  = new NonDerivativeEntity(-1);
                 } else {
-                    newEntity = new PhiDerivative(0, (DerivativeEntity) derivativeA, (DerivativeEntity) derivativeB);
+                    newEntity = new PhiDerivative(0, derivativeA, derivativeB);
                 }
             }
             else {
@@ -86,7 +80,7 @@ public class CurrentState {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CurrentState state = (CurrentState) o;
-        return Objects.deepEquals(variablesArray, state.variablesArray);
+        return Arrays.equals(variablesArray, state.variablesArray);
     }
 
     @Override

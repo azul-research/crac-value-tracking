@@ -1,9 +1,6 @@
 package analysis;
 
-import entitites.DerivativeEntity;
-import entitites.Entity;
-import entitites.NonDerivativeEntity;
-import entitites.StraightDerivative;
+import entitites.*;
 import javassist.CtMethod;
 import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
@@ -16,7 +13,6 @@ import java.util.regex.Pattern;
 
 import static analysis.InstructionsMatcher.*;
 import static analysis.InstructionsMatcher.matchReturn;
-import static entitites.NonDerivativeEntity.createNonDerivative;
 
 public class MethodAnalyser {
 
@@ -105,6 +101,10 @@ public class MethodAnalyser {
         for (var block: blocks) {
             analyseBasicBlock(block.position());
         }
+
+//        for (var block: blocks) {
+//            analyseBasicBlock(block.position());
+//        }
 
         CurrentState previousState;
         do {
@@ -283,6 +283,7 @@ public class MethodAnalyser {
     private int parseNextByte(CodeIterator iterator, int index) {
             return iterator.byteAt(index + 1) & 0xff;
 
-    };
+    }
+
 
 }

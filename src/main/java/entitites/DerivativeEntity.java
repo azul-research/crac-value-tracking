@@ -2,15 +2,16 @@ package entitites;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Set;
 
 public class DerivativeEntity extends Entity {
 
     int line;
 
 //    String functionName;
-final DerivativeEntity[] predecessors;
+final Entity[] predecessors;
 
-    public DerivativeEntity(int line, DerivativeEntity... derivatives) {
+    public DerivativeEntity(int line, Entity... derivatives) {
         super(line);
         predecessors = derivatives;
     }
@@ -21,7 +22,7 @@ final DerivativeEntity[] predecessors;
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DerivativeEntity that = (DerivativeEntity) o;
-        return line == that.line && Objects.deepEquals(predecessors, that.predecessors);
+        return line == that.line && Arrays.equals(predecessors, that.predecessors);
     }
 
     @Override
