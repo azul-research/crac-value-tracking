@@ -42,10 +42,17 @@ final Entity[] predecessors;
         return result.toString();
     }
 
-//
-//    public boolean containsThisAssign(int lineNumber) {
-//        for (var pred: predecessors) {
-//
-//        }
-//    }
+
+    public boolean containsThisAssign(int lineNumber) {
+        for (var pred: predecessors) {
+            if (pred instanceof DerivativeEntity) {
+                DerivativeEntity predDer = (DerivativeEntity) pred;
+                if (predDer.containsThisAssign(lineNumber)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }

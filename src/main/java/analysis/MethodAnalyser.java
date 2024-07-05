@@ -2,6 +2,7 @@ package analysis;
 
 import entitites.*;
 import entitites.derivatives.DerivativeEntity;
+import entitites.derivatives.OpDerivative;
 import entitites.derivatives.PhiDerivative;
 import entitites.derivatives.StraightDerivative;
 import javassist.CtMethod;
@@ -103,11 +104,9 @@ public class MethodAnalyser {
 
 
     public void analyse() {
-
         for (var block : blocks) {
             analyseBasicBlock(block.position());
         }
-
 
         CurrentState previousState;
         do {
@@ -177,11 +176,10 @@ public class MethodAnalyser {
                 var arrayIndex = stack.pop();
                 var valueOnStack = stack.pop();
                 stack.push(valueOnStack);
-//            } else if (matchBinOperation(name)) {
-//                var first = stack.pop();
-//                var second = stack.pop();
-//
-//                stack.push(createMergedSuccessor(first, second));
+            } else if (matchBinOperation(name)) {
+                var first = stack.pop();
+                var second = stack.pop();
+                stack.push(createMergedSuccessor(first, second, getLineNumber(index)));
             } else if (!matchReturn(name) && !matchIf(name) && !matchGoto(name)) {
                 System.out.println("UNKNOWN OPCODE: " + name);
             }
@@ -191,6 +189,17 @@ public class MethodAnalyser {
         }
     }
 
+    private Entity createMergedSuccessor(Entity first, Entity second, int codeLine) {
+        if (first.isNonDerivative() && second.isNonDerivative()) {
+            return new NonDerivativeEntity(codeLine);
+        } else if (first.isDerivative() && second.isDerivative()) {
+            return new OpDerivative(codeLine, first, second);
+        } else if (first.isDerivative()) {
+            return createSuccessor(first, codeLine);
+        } else {
+            return createSuccessor(second, codeLine);
+        }
+    }
 
     void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int varNumber) {
         var valueOnStack = stack.pop();

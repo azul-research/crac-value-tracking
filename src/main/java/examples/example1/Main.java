@@ -5,7 +5,7 @@ public class Main {
         String b = "";
         String c = "";
         int i = 5;
-        while (i > 0) {
+        if (i > 0) {
             i++;
             if (i == 5) {
                 b = args[i];

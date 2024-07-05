@@ -39,31 +39,39 @@ public class MethodAnalyserTest {
         expected[2] = new NonDerivativeEntity(7);
         assertArrayEquals(expected, result.getVariablesArray());
     }
-//
-//
-//
-//    @Test
-//    public void analysisWithIfAndWhileTest() {
-//        var result = analyseMainFunction("src/test/java/testJarFiles/main1.jar", "examples.example1.Main");
-//        Entity[] expected = new Entity[4];
-//        expected[0] = new RootDerivative("args");
-//        expected[1] = new PhiDerivative(0, new NonDerivativeEntity(5), new StraightDerivative(11, expected[0]));
-//        expected[2] = new PhiDerivative(0, new NonDerivativeEntity(5), new StraightDerivative(14, expected[0]));
-//        expected[3] = new NonDerivativeEntity(7);
-//        assertArrayEquals(expected, result.getVariablesArray());
-//
-//    }
+
+
+    @Test
+    public void analysisWithWhileTest() {
+        var result = analyseMainFunction("src/test/java/testJarFiles/main2.jar", "examples.example2.Main");
+        Entity[] expected = new Entity[3];
+        expected[0] = new RootDerivative("args");
+        expected[1] = new NonDerivativeEntity(5);
+        expected[2] = new PhiDerivative(0, new NonDerivativeEntity(6), new StraightDerivative(9, expected[0]));
+
+        assertArrayEquals(expected, result.getVariablesArray());
+    }
+
+
+    @Test
+    public void analysisWithNestedIfTest() {
+        var result = analyseMainFunction("src/test/java/testJarFiles/main1.jar", "examples.example1.Main");
+        Entity[] expected = new Entity[4];
+        expected[0] = new RootDerivative("args");
+        expected[1] = new PhiDerivative(0, new NonDerivativeEntity(5), new StraightDerivative(11, expected[0]));
+        expected[2] = new PhiDerivative(0, new NonDerivativeEntity(5), new StraightDerivative(14, expected[0]));
+        expected[3] = new NonDerivativeEntity(7);
+        assertArrayEquals(expected, result.getVariablesArray());
+
+    }
 
 
     public CurrentState analyseMainFunction(String jarFilePath, String className) {
-
         ControlFlowGraph cfg = new ControlFlowGraph(jarFilePath);
         cfg.createClassCFG(className);
         String methodName = "main";
         var methodCFG = cfg.getClassCFG(className).getMethodCFG(methodName);
         var method = cfg.getMethod(className, methodName);
-
-
 
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, Set.of(0));
         analyser.analyse();
