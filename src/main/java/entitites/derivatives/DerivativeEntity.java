@@ -1,8 +1,9 @@
-package entitites;
+package entitites.derivatives;
+
+import entitites.Entity;
 
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Set;
 
 public class DerivativeEntity extends Entity {
 
@@ -31,10 +32,20 @@ final Entity[] predecessors;
     }
 
     @Override
-    public void print(int tabNumber) {
-        System.out.println("\t".repeat(tabNumber) + "derivative from: ");
+    public String info(int tabNumber) {
+        StringBuilder result = new StringBuilder();
+        result.append("\t".repeat(tabNumber)).append("derivative from: ");
         for (var pred : predecessors) {
-            pred.print(tabNumber + 1);
+            result.append(pred.info(tabNumber + 1));
+            result.append("\n");
         }
+        return result.toString();
     }
+
+//
+//    public boolean containsThisAssign(int lineNumber) {
+//        for (var pred: predecessors) {
+//
+//        }
+//    }
 }

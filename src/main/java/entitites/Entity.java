@@ -6,7 +6,7 @@ public abstract class Entity {
     int line;
 
     public Entity(int line) {
-        this.line = line;
+        line = line;
     }
 
     public boolean isUndefined() {
@@ -21,7 +21,7 @@ public abstract class Entity {
         return !isUndefined() && !isNonDerivative();
     }
 
-    public abstract void print(int tabNumber);
+    public abstract String info(int tabNumber);
 
 
     @Override

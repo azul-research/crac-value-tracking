@@ -1,16 +1,20 @@
-package entitites;
+package entitites.derivatives;
 
-import java.util.Arrays;
+import entitites.Entity;
 
 public class StraightDerivative extends DerivativeEntity {
+
+    int codeLine;
     public StraightDerivative(int line, Entity derivatives) {
         super(line, derivatives);
+        codeLine = line;
     }
 
     @Override
-    public void print(int tabNumber) {
-        System.out.println("\t".repeat(tabNumber) + "assigned to derivative on line " + line + ":");
-        this.predecessors[0].print(tabNumber + 1);
+    public String info(int tabNumber) {
+
+        return "\t".repeat(tabNumber) + "assigned to derivative on line " + codeLine + ":\n" +
+                this.predecessors[0].info(tabNumber + 1);
     }
 
 

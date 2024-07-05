@@ -1,6 +1,7 @@
 package output;
 
 import entitites.*;
+import entitites.derivatives.RootDerivative;
 
 import java.util.*;
 
@@ -16,7 +17,10 @@ public class CurrentState {
 
     public CurrentState(Entity[] variables) {
         this.variablesArray = variables;
+    }
 
+    public CurrentState(CurrentState state) {
+        this.variablesArray = state.variablesArray.clone();
     }
 
     public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives) {
@@ -84,4 +88,8 @@ public class CurrentState {
     public int hashCode() {
         return Arrays.hashCode(variablesArray);
     }
+
+
+
+
 }

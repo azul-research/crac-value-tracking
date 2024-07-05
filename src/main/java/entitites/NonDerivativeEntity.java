@@ -2,13 +2,17 @@ package entitites;
 
 public class NonDerivativeEntity extends Entity {
 
+
+    int codeLine;
+
     public NonDerivativeEntity(int line) {
         super(line);
+        codeLine = line;
     }
 
     @Override
-    public void print(int tabNumber) {
-        System.out.println("\t".repeat(tabNumber) + "assigned to non derivative on line " + line);
+    public String info(int tabNumber) {
+        return "\t".repeat(tabNumber) + "assigned to non derivative on line " + codeLine;
     }
 
 

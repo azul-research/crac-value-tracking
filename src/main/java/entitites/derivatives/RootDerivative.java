@@ -1,4 +1,4 @@
-package entitites;
+package entitites.derivatives;
 
 import java.util.Objects;
 
@@ -11,8 +11,8 @@ public class RootDerivative extends DerivativeEntity {
 
 
     @Override
-    public void print(int tabNumber) {
-        System.out.println("\t".repeat(tabNumber) + "root derivative " + name);
+    public String info(int tabNumber) {
+        return ("\t".repeat(tabNumber) + "root derivative " + name);
     }
 
 

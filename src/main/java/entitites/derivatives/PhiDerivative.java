@@ -1,4 +1,6 @@
-package entitites;
+package entitites.derivatives;
+
+import entitites.Entity;
 
 public class PhiDerivative extends DerivativeEntity {
     public PhiDerivative(int line, Entity... derivatives) {
@@ -18,10 +20,14 @@ public class PhiDerivative extends DerivativeEntity {
 
 
     @Override
-    public void print(int tabNumber) {
-        System.out.println("\t".repeat(tabNumber) + "derivative from any of this: ");
+    public String info(int tabNumber) {
+        StringBuilder result = new StringBuilder();
+        result.append("\t".repeat(tabNumber)).append("derivative from any of this: \n");
         for (var pred : predecessors) {
-            pred.print(tabNumber + 1);
+            result.append(pred.info(tabNumber + 1));
+            result.append("\n");
         }
+
+        return result.toString();
     }
 }

@@ -7,7 +7,7 @@ public class UndefinedEntity extends Entity {
 
 
     @Override
-    public void print(int tabNumber) {
-        System.out.println("\t".repeat(tabNumber) + "undefined");
+    public String info(int tabNumber) {
+        return  "\t".repeat(tabNumber) + "undefined";
     }
 }

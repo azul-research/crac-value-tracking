@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class ClassCFG {
 
-    private Map<String, ControlFlow.Block[]> methodsCFG = new HashMap<>();
+    private final Map<String, ControlFlow.Block[]> methodsCFG = new HashMap<>();
 
 
     void addMethodCFG(ControlFlow.Block[] basicBlocks, String name) {

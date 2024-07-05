@@ -1,6 +1,9 @@
 package analysis;
 
 import entitites.*;
+import entitites.derivatives.DerivativeEntity;
+import entitites.derivatives.PhiDerivative;
+import entitites.derivatives.StraightDerivative;
 import javassist.CtMethod;
 import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
@@ -30,6 +33,32 @@ public class MethodAnalyser {
     Map<Integer, String> startingDerivatives;
 
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
+
+    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtMethod method, Set<Integer> derivativeVars) {
+
+        this.codeAttribute = method.getMethodInfo().getCodeAttribute();
+        setFileName(method);
+
+        setStartingDerivatives(derivativeVars);
+        setMethodCFG(cfgBlocks);
+
+        this.blocks = cfgBlocks;
+        this.startBlock = Collections.min(this.methodCFG.keySet());
+        this.endBlock = Collections.max(this.methodCFG.keySet());
+
+        System.out.println("Start block: " + startBlock + ", end block: " + endBlock);
+
+        this.numOfVars = codeAttribute.getMaxLocals();
+
+        setCurrentBlocksStates(numOfVars, this.startingDerivatives);
+
+        System.out.println("Number of local variables: " + numOfVars);
+
+    }
+
+    public CurrentState getAnalysisResult() {
+        return currentBlocksStates.get(endBlock);
+    }
 
     String getVarName(int i) {
         var attribute = (LocalVariableAttribute) codeAttribute.getAttribute(LocalVariableAttribute.tag);
@@ -72,29 +101,6 @@ public class MethodAnalyser {
 
     }
 
-    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtMethod method, Set<Integer> derivativeVars) {
-
-        this.codeAttribute = method.getMethodInfo().getCodeAttribute();
-        setFileName(method);
-
-        setStartingDerivatives(derivativeVars);
-        setMethodCFG(cfgBlocks);
-
-        this.blocks = cfgBlocks;
-        this.startBlock = Collections.min(this.methodCFG.keySet());
-        this.endBlock = Collections.max(this.methodCFG.keySet());
-
-
-        System.out.println("Start block: " + startBlock + ", end block: " + endBlock);
-
-        this.numOfVars = codeAttribute.getMaxLocals();
-
-        setCurrentBlocksStates(numOfVars, this.startingDerivatives);
-
-        System.out.println("Number of local variables: " + numOfVars);
-
-
-    }
 
     public void analyse() {
 
@@ -117,10 +123,9 @@ public class MethodAnalyser {
         System.out.println();
         System.out.println("Variables at the end of the method:");
         for (int i = 0; i < numOfVars; i++) {
-            System.out.print(getVarName(i) + ": ");
-            currentBlocksStates.get(endBlock).getVarValue(i).print(0);
+            System.out.print(getVarName(i) + " - ");
+            System.out.println(currentBlocksStates.get(endBlock).getVarValue(i).info(0));
         }
-
 
     }
 
@@ -154,7 +159,7 @@ public class MethodAnalyser {
             System.out.println("Instruction at index " + index + ": " + name);
 
             if (matchConstLoad(name) || matchConstLoadFromPool(name)) {
-                stack.add(createNonDerivative(getLineNumber(index)));
+                stack.push(createNonDerivative(getLineNumber(index)));
 
             } else if (matchStoreData(name)) {
                 var varNumber = getNumberInOpCode(name);
@@ -166,17 +171,17 @@ public class MethodAnalyser {
 
             } else if (matchLoadVariable(name)) {
                 var varNumber = getNumberInOpCode(name);
-                stack.add(state.getVarValue(varNumber));
+                stack.push(state.getVarValue(varNumber));
 
             } else if (matchLoadArrayElem(name)) {
                 var arrayIndex = stack.pop();
                 var valueOnStack = stack.pop();
-                stack.add(valueOnStack);
+                stack.push(valueOnStack);
 //            } else if (matchBinOperation(name)) {
 //                var first = stack.pop();
 //                var second = stack.pop();
 //
-//                stack.add(createMergedSuccessor(first, second));
+//                stack.push(createMergedSuccessor(first, second));
             } else if (!matchReturn(name) && !matchIf(name) && !matchGoto(name)) {
                 System.out.println("UNKNOWN OPCODE: " + name);
             }
@@ -217,7 +222,7 @@ public class MethodAnalyser {
     private CurrentState mergeCurStates(List<ControlFlow.Block> blocks) {
 
         if (blocks.size() == 1) {
-            return currentBlocksStates.get(blocks.getFirst().position());
+            return new CurrentState(currentBlocksStates.get(blocks.getFirst().position()));
         }
         CurrentState state = CurrentState.getEmptyState(numOfVars, startingDerivatives);
 
