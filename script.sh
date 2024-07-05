@@ -1,2 +1,0 @@
-javac /Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/src/test/java/examples/$1/Main.java
-jar cf /Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/src/test/java/examples/$1/$1.jar /Users/dariasuvorova/IdeaProjects/unsafecodeanalysis/src/test/java/examples/$1/Main.class

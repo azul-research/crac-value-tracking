@@ -66,14 +66,7 @@ public class ControlFlowGraph {
         MethodInfo methodInfo = method.getMethodInfo();
         ControlFlow controlFlow = new ControlFlow(method.getDeclaringClass(), methodInfo);
         ControlFlow.Block[] blocks = controlFlow.basicBlocks();
-//
-//        // Map to store the control flow graph
-//        Map<Integer, ControlFlow.Block> controlFlowGraph = new HashMap<>();
-//
-//        // Build the control flow graph
-//        for (ControlFlow.Block block : blocks) {
-//            controlFlowGraph.put(block.position(), block);
-//        }
+
 
         // Print the control flow graph
         for (var block: blocks) {
