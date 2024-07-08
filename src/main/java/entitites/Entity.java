@@ -2,11 +2,13 @@ package entitites;
 
 import java.util.Objects;
 
-public abstract class Entity {
-    int line;
+public class Entity {
+    protected int line;
+//    int varNumber;
 
     public Entity(int line) {
-        line = line;
+        this.line = line;
+//        this.varNumber = varNumber;
     }
 
     public boolean isUndefined() {
@@ -21,7 +23,9 @@ public abstract class Entity {
         return !isUndefined() && !isNonDerivative();
     }
 
-    public abstract String info(int tabNumber);
+    public String info(int tabNumber) {
+        return "";
+    }
 
 
     @Override

@@ -7,8 +7,6 @@ import java.util.Objects;
 
 public class DerivativeEntity extends Entity {
 
-    int line;
-
 //    String functionName;
 final Entity[] predecessors;
 
@@ -43,16 +41,17 @@ final Entity[] predecessors;
     }
 
 
-    public boolean containsThisAssign(int lineNumber) {
+    public boolean containsEntity(Entity entity) {
         for (var pred: predecessors) {
-            if (pred instanceof DerivativeEntity) {
-                DerivativeEntity predDer = (DerivativeEntity) pred;
-                if (predDer.containsThisAssign(lineNumber)) {
+            if (pred.equals(entity)) {
+                return true;
+            }
+            if (pred.isDerivative()) {
+                if (((DerivativeEntity) pred).containsEntity(entity)) {
                     return true;
                 }
             }
         }
-
         return false;
     }
 }

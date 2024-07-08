@@ -35,7 +35,7 @@ public class MethodAnalyser {
 
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
-    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtMethod method, Set<Integer> derivativeVars) {
+    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtMethod method, List<Integer> derivativeVars) {
 
         this.codeAttribute = method.getMethodInfo().getCodeAttribute();
         setFileName(method);
@@ -63,7 +63,7 @@ public class MethodAnalyser {
 
     String getVarName(int i) {
         var attribute = (LocalVariableAttribute) codeAttribute.getAttribute(LocalVariableAttribute.tag);
-        return attribute.variableName(i);
+        return attribute.variableNameByIndex(i);
     }
 
     Integer getLineNumber(int i) { // i - number of bytecode instruction in method
@@ -91,13 +91,10 @@ public class MethodAnalyser {
         }
     }
 
-    private void setStartingDerivatives(Set<Integer> derivativeVar) {
+    private void setStartingDerivatives(List<Integer> derivativeVar) {
         this.startingDerivatives = new HashMap<>();
-        var iter = derivativeVar.iterator();
-        int index;
-        while (iter.hasNext()) {
-            index = iter.next();
-            startingDerivatives.put(index, getVarName(index));
+        for (var derivative : derivativeVar) {
+            startingDerivatives.put(derivative, getVarName(derivative));
         }
 
     }
@@ -165,7 +162,7 @@ public class MethodAnalyser {
                 processDataStore(index, stack, state, varNumber);
 
             } else if (matchStoreToVariable(name)) {
-                int varNumber = parseNextByte(iterator, index);
+                int varNumber = parseNextBytes(iterator, index, 1);
                 processDataStore(index, stack, state, varNumber);
 
             } else if (matchLoadVariable(name)) {
@@ -180,12 +177,50 @@ public class MethodAnalyser {
                 var first = stack.pop();
                 var second = stack.pop();
                 stack.push(createMergedSuccessor(first, second, getLineNumber(index)));
+            } else if (matchCreateArray(name)) {
+                processCreateArray(index, stack, iterator);
+            } else if (matchStoreToArray(name)) {
+                var value = stack.pop();
+                var ind = stack.pop();
+                var arrayRef = stack.pop();
+//                processStoreToArray(index);
+            } else if (matchIncrementLocal(name)) {
+                var varIndex = parseNextBytes(iterator, index, 1);
+                if (state.isDerivative(varIndex)) {
+                    state.updateVariable(varIndex, createSuccessor(state.getVarValue(index), getLineNumber(index)));
+                } else {
+                    state.updateVariable(varIndex, createNonDerivative(getLineNumber(index)));
+                }
             } else if (!matchReturn(name) && !matchIf(name) && !matchGoto(name)) {
                 System.out.println("UNKNOWN OPCODE: " + name);
             }
 
             index += opcodeLength[opcode];
 
+        }
+    }
+
+    private void processStoreToArray(int index) {
+
+    }
+
+    private void processCreateArray(int index, ArrayDeque<Entity> stack, CodeIterator iterator) {
+        var count = stack.pop();
+        var typeRef = parseNextBytes(iterator, index, 2);
+        if (count.isDerivative()) {
+            stack.push(createSuccessor(count, getLineNumber(index)));
+        } else {
+            stack.push(createNonDerivative(getLineNumber(index)));
+        }
+    }
+
+
+    void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int varNumber) {
+        var valueOnStack = stack.pop();
+        if (valueOnStack.isDerivative()) {
+            state.updateVariable(varNumber, createSuccessor(valueOnStack, getLineNumber(index)));
+        } else {
+            state.updateVariable(varNumber, createNonDerivative(getLineNumber(index)));
         }
     }
 
@@ -198,15 +233,6 @@ public class MethodAnalyser {
             return createSuccessor(first, codeLine);
         } else {
             return createSuccessor(second, codeLine);
-        }
-    }
-
-    void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int varNumber) {
-        var valueOnStack = stack.pop();
-        if (valueOnStack.isDerivative()) {
-            state.updateVariable(varNumber, createSuccessor(valueOnStack, getLineNumber(index)));
-        } else {
-            state.updateVariable(varNumber, createNonDerivative(getLineNumber(index)));
         }
     }
 
@@ -245,20 +271,41 @@ public class MethodAnalyser {
 
             for (var bl : blocks) {
                 Entity entity = currentBlocksStates.get(bl.position()).getVarValue(i);
-                if (!entity.isUndefined() && !predecessorsSet.contains(entity)) {
+                if (entity.isNonDerivative() && predecessorsSet.stream().anyMatch(Entity::isNonDerivative)) {
+                    continue;
+                }
+                if (!entity.isUndefined() && !setContainsEntity(predecessorsSet, entity)) {
                     predecessorsSet.add(entity);
                     predecessors.add(entity);
                 }
+            }
 
-                if (predecessors.size() == 1) {
-                    state.updateVariable(i, predecessors.getFirst());
-                } else {
-                    state.updateVariable(i, new PhiDerivative(0, predecessors.toArray(Entity[]::new)));
-                }
+            if (predecessors.size() == 1) {
+                state.updateVariable(i, predecessors.getFirst());
+            } else {
+                state.updateVariable(i, new PhiDerivative(0, predecessors.toArray(Entity[]::new)));
             }
         }
 
         return state;
+    }
+
+
+    boolean setContainsEntity(Set<Entity> set, Entity entity) {
+        if (set.contains(entity)) {
+            return true;
+        }
+        var predecessors = set.toArray(Entity[]::new);
+        for (var pred : predecessors) {
+            if (pred.isDerivative()) {
+                if (((DerivativeEntity) pred).containsEntity(entity)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+
     }
 
     private int getNumberInOpCode(String opCode) {
@@ -272,8 +319,13 @@ public class MethodAnalyser {
     }
 
 
-    private int parseNextByte(CodeIterator iterator, int index) {
-        return iterator.byteAt(index + 1) & 0xff;
+    private int parseNextBytes(CodeIterator iterator, int index, int bytesNumber) {
+        int result = 1;
+        for (int i = index; i < bytesNumber + index; i++) {
+            result = result | ((iterator.byteAt(i + 1) & 0xff) << (bytesNumber - (index - i) - 1) * 8);
+        }
+
+        return result;
     }
 
 

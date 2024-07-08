@@ -11,6 +11,7 @@ import input.ControlFlowGraph;
 import org.junit.jupiter.api.Test;
 import output.CurrentState;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -59,7 +60,7 @@ public class MethodAnalyserTest {
         Entity[] expected = new Entity[4];
         expected[0] = new RootDerivative("args");
         expected[1] = new PhiDerivative(0, new NonDerivativeEntity(5), new StraightDerivative(11, expected[0]));
-        expected[2] = new PhiDerivative(0, new NonDerivativeEntity(5), new StraightDerivative(14, expected[0]));
+        expected[2] = new PhiDerivative(0, new NonDerivativeEntity(6), new StraightDerivative(14, expected[0]));
         expected[3] = new NonDerivativeEntity(7);
         assertArrayEquals(expected, result.getVariablesArray());
 
@@ -73,7 +74,7 @@ public class MethodAnalyserTest {
         var methodCFG = cfg.getClassCFG(className).getMethodCFG(methodName);
         var method = cfg.getMethod(className, methodName);
 
-        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, Set.of(0));
+        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, List.of(0));
         analyser.analyse();
 
         return analyser.getAnalysisResult();

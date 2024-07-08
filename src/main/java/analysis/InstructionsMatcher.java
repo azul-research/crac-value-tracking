@@ -60,4 +60,16 @@ public class InstructionsMatcher {
     public static boolean matchGoto(String opcode) {
         return opcode.equals("goto");
     }
+
+    public static boolean matchCreateArray(String opcode) {
+        return opcode.equals("anewarray");
+    }
+
+    public static boolean matchStoreToArray(String opcode) {
+        return opcode.equals("aastore");
+    }
+
+    public static boolean matchIncrementLocal(String opcode) {
+        return opcode.equals("iinc");
+    }
 }
