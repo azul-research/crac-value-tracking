@@ -16,8 +16,17 @@ public class CurrentState {
         return variablesArray;
     }
 
+    public Entity getReturnState() {
+        return returnState;
+    }
+
+
+    public void updateReturnState(Entity entity) {
+        this.returnState = entity;
+    }
     public CurrentState(Entity[] variables) {
         this.variablesArray = variables;
+        returnState = new UndefinedEntity();
     }
 
     public CurrentState(CurrentState state) {
@@ -63,8 +72,6 @@ public class CurrentState {
     public int hashCode() {
         return Arrays.hashCode(variablesArray);
     }
-
-
 
 
 }

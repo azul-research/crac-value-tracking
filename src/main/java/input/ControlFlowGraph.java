@@ -42,7 +42,7 @@ public class ControlFlowGraph {
             classesCFG.put(className, classCFG);
 
             for (CtMethod method : ctClass.getDeclaredMethods()) {
-                System.out.println("Analyzing method: " + method.getName());
+//                System.out.println("Analyzing method: " + method.getName());
                 classCFG.addMethodCFG(createMethodCFG(method), method.getName());
             }
         } catch (NotFoundException | BadBytecode e) {
@@ -66,9 +66,9 @@ public class ControlFlowGraph {
         ControlFlow controlFlow = new ControlFlow(method.getDeclaringClass(), methodInfo);
         ControlFlow.Block[] blocks = controlFlow.basicBlocks();
 
-        for (var block : blocks) {
-            System.out.println(block.toString());
-        }
+//        for (var block : blocks) {
+//            System.out.println(block.toString());
+//        }
         return blocks;
 
     }

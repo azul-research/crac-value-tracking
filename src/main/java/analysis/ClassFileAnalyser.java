@@ -99,7 +99,7 @@ public class ClassFileAnalyser {
         } else if (matchGoto(name)) {
             lineNumber = processGoto(stream, lineNumber, name);
         }
-        else if (!matchReturn(name)) {
+        else if (!matchReturnVoid(name)) {
             System.out.println("UNKNOWN OPCODE: " + name);
             lineNumber++;
         } else {

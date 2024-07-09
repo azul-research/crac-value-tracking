@@ -67,7 +67,7 @@ public class BytecodeExtractor {
     }
 
 
-    public static String getSourceFile(String className) throws IOException {
+    public static String getSourceFile(String className) {
 
         Path p = Paths.get(URI.create("jrt:/")).resolve("/modules/java.base/" + className);
         return p.getFileName().toString();

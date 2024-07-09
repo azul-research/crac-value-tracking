@@ -53,10 +53,6 @@ public class InstructionsMatcher {
         return opcode.equals("aaload");
     }
 
-    public static boolean matchReturn(String opCode) {
-        return opCode.equals("return");
-    }
-
     public static boolean matchGoto(String opcode) {
         return opcode.equals("goto");
     }
@@ -71,5 +67,24 @@ public class InstructionsMatcher {
 
     public static boolean matchIncrementLocal(String opcode) {
         return opcode.equals("iinc");
+    }
+
+    public static boolean matchInvokeVirtual(String opcode) {
+        return opcode.equals("invokevirtual");
+    }
+
+    public static boolean matchGetField(String opcode) {
+        return opcode.equals("getfield");
+    }
+
+    public static boolean matchReturnValue(String opcode) {
+        String regex = ".return";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(opcode);
+        return matcher.matches();
+    }
+
+    public static boolean matchReturnVoid(String opcode) {
+        return opcode.equals("return");
     }
 }

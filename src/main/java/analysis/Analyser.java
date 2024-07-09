@@ -4,23 +4,23 @@ import input.ControlFlowGraph;
 
 import java.util.List;
 
+import static input.BytecodeExtractor.getSourceFile;
+
 public class Analyser {
 
-
     ControlFlowGraph controlFlowGraph;
-
     String programJarPath;
-
     String mainClassName;
 
     public Analyser(String dirPath, String mainClassName) {
         this.programJarPath = dirPath;
         this.mainClassName = mainClassName;
         controlFlowGraph = new ControlFlowGraph(dirPath);
+//        controlFlowGraph.addClassPath(getSourceFile("java"));
 
     }
 
-    private MethodAnalyser analyseMethod(String className, String methodName, List<Integer> derivativeArgs) {
+    public MethodAnalyser analyseMethod(String className, String methodName, List<Integer> derivativeArgs) {
 
         controlFlowGraph.createClassCFG(className);
 
