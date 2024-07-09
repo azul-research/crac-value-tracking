@@ -8,7 +8,8 @@ import java.util.*;
 public class CurrentState {
 
 
-    Entity[] variablesArray;
+    private Entity[] variablesArray;
+    private Entity returnState;
 
 
     public Entity[] getVariablesArray() {
@@ -21,6 +22,7 @@ public class CurrentState {
 
     public CurrentState(CurrentState state) {
         this.variablesArray = state.variablesArray.clone();
+        this.returnState = state.returnState;
     }
 
     public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives) {
@@ -36,33 +38,6 @@ public class CurrentState {
         return new CurrentState(vars);
     }
 
-
-//    public void mergeWith(CurrentState st1) {
-//        var newVariablesArray = st1.getVariablesArray();
-//        Entity derivativeA;
-//        Entity derivativeB;
-//        Entity newEntity;
-//        for (int i = 0; i < variablesArray.length; i++) {
-//            derivativeA = variablesArray[i];
-//            derivativeB = newVariablesArray[i];
-//
-//            if (!derivativeA.equals(derivativeB)) {
-//                if (derivativeA.isUndefined()) {
-//                    newEntity = derivativeB;
-//                } else if (derivativeB.isUndefined()) {
-//                    newEntity = derivativeA;
-//                } else if (derivativeA.isNonDerivative() && derivativeB.isNonDerivative()) {
-//                    newEntity = new NonDerivativeEntity(-1);
-//                } else {
-//                    newEntity = new PhiDerivative(0, derivativeA, derivativeB);
-//                }
-//            } else {
-//                newEntity = variablesArray[i];
-//            }
-//            variablesArray[i] = newEntity;
-//
-//        }
-//    }
 
     public void updateVariable(Integer number, Entity newValue) {
         variablesArray[number] = newValue;

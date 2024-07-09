@@ -9,7 +9,7 @@ import java.util.*;
 public class ControlFlowGraph {
 
     private ClassPool pool;
-    private Map<String, ClassCFG> classesCFG = new HashMap<>();
+    private final Map<String, ClassCFG> classesCFG = new HashMap<>();
 
 
     public Map<String, ClassCFG> getCFG() {
@@ -21,9 +21,14 @@ public class ControlFlowGraph {
     }
 
     public ControlFlowGraph(String jarFilePath) {
+        addClassPath(jarFilePath);
+    }
+
+
+    public void addClassPath(String filePath) {
         try {
             pool = ClassPool.getDefault();
-            pool.appendClassPath(jarFilePath);
+            pool.appendClassPath(filePath);
         } catch (NotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -40,10 +45,7 @@ public class ControlFlowGraph {
                 System.out.println("Analyzing method: " + method.getName());
                 classCFG.addMethodCFG(createMethodCFG(method), method.getName());
             }
-        } catch (NotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (BadBytecode e) {
-            e.printStackTrace();
+        } catch (NotFoundException | BadBytecode e) {
             throw new RuntimeException(e);
         }
     }
@@ -58,7 +60,7 @@ public class ControlFlowGraph {
 
     }
 
-    public static ControlFlow.Block[] createMethodCFG(CtMethod method) throws BadBytecode {
+    private ControlFlow.Block[] createMethodCFG(CtMethod method) throws BadBytecode {
 
         MethodInfo methodInfo = method.getMethodInfo();
         ControlFlow controlFlow = new ControlFlow(method.getDeclaringClass(), methodInfo);

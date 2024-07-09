@@ -1,3 +1,4 @@
+import analysis.Analyser;
 import analysis.MethodAnalyser;
 import input.ControlFlowGraph;
 
@@ -22,62 +23,17 @@ public class UnsafeCodeAnalysis {
             return;
         }
 
+        Analyser analyser = new Analyser(args[0], args[1]);
 
 
+        analyser.analyseProgram();
 
-//        System.out.println(ClassLoader.getSystemResource("java/lang/String.class"));
-
-
-//        getSourceFile("java/lang/String.class");
-
-//
-//        ControlFlowGraph cfg1 = new ControlFlowGraph(getSourceFile("java"));
-//
-
-
-        analyseMethod(getSourceFile("java"), "java.lang.String", "charAt", List.of(0, 1));
-//        cfg1.createClassCFG("java.lang.String");
-//
-//        String clName = "java.lang.String";
-//        String mName = "length";
-//        var methodCFG = cfg1.getClassCFG(clName).getMethodCFG(mName);
-//        System.out.println(Arrays.toString(methodCFG));
-//
-
-        analyseMethod(args[0], args[1], "main", List.of(0));
-//        String javaFilesPath = args[2];
-
-//        String jarFilePath = args[0];
-//        var classNames = extractJarFile(jarFilePath);
-//
-//        System.out.println("Class names: " + classNames);
-
-
-//        String className = args[1];
-//        String methodName = "main";
-//        var methodCFG = cfg.getClassCFG(className).getMethodCFG(methodName);
-//        var method = cfg.getMethod(className, methodName);
-
-//        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, Set.of(0));
-//        analyser.analyse();
+//        analyseMethod(getSourceFile("java"), "java.lang.String", "contentEquals", List.of(0, 1));
+//        analyseMethod(args[0], args[1], "main", List.of(0));
 
     }
 
 
-    public static MethodAnalyser analyseMethod(String dirPath, String className, String methodName, List<Integer> derivativeArgs) {
-
-        ControlFlowGraph cfg = new ControlFlowGraph(dirPath);
-
-        cfg.createClassCFG(className);
-
-        var methodCFG = cfg.getClassCFG(className).getMethodCFG(methodName);
-        var method = cfg.getMethod(className, methodName);
-
-        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs);
-        analyser.analyse();
-
-        return analyser;
-    }
 
 
 
