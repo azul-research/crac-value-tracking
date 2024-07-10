@@ -5,18 +5,26 @@ import entitites.derivatives.DerivativeEntity;
 import entitites.derivatives.OpDerivative;
 import entitites.derivatives.PhiDerivative;
 import entitites.derivatives.StraightDerivative;
+import javassist.CtClass;
 import javassist.CtMethod;
+import javassist.NotFoundException;
 import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import output.CurrentState;
 
 import java.util.*;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static analysis.InstructionsMatcher.*;
 
 public class MethodAnalyser {
+
+    private static final Logger logger = LogManager.getLogger(MethodAnalyser.class);
+
 
     Map<Integer, ControlFlow.Block> methodCFG;
 
@@ -51,13 +59,13 @@ public class MethodAnalyser {
         this.startBlock = Collections.min(this.methodCFG.keySet());
         this.endBlock = Collections.max(this.methodCFG.keySet());
 
-        System.out.println("Start block: " + startBlock + ", end block: " + endBlock);
+        logger.debug("Start block: {}, end block: {}", startBlock, endBlock);
 
         this.numOfVars = codeAttribute.getMaxLocals();
 
         setCurrentBlocksStates(numOfVars, this.startingDerivatives);
 
-        System.out.println("Number of local variables: " + numOfVars);
+        logger.debug("Number of local variables: {}", numOfVars);
 
     }
 
@@ -103,7 +111,7 @@ public class MethodAnalyser {
     }
 
     public void analyse() {
-        System.out.println("Analysing method: " + method.getName());
+        logger.debug("Analysing method: {}", method.getName());
         for (var block : blocks) {
             analyseBasicBlock(block.position());
         }
@@ -118,17 +126,15 @@ public class MethodAnalyser {
             }
         } while (!previousState.equals(currentBlocksStates.get(endBlock)));
 
-        System.out.println();
-        System.out.println("Variables at the end of the method:");
+        logger.info("Variables at the end of the method:");
         for (int i = 0; i < numOfVars; i++) {
-            System.out.print(getVarName(i) + " - ");
-            System.out.println(currentBlocksStates.get(endBlock).getVarValue(i).info(0));
+            logger.info("{} - {}", getVarName(i), currentBlocksStates.get(endBlock).getVarValue(i).info(0));
         }
 
     }
 
     void analyseBasicBlock(int blockIndex) {
-        System.out.println("Analysing block: " + blockIndex);
+        logger.debug("Analysing block: {}", blockIndex);
         CurrentState state;
         if (blockIndex == startBlock) {
             state = CurrentState.getEmptyState(numOfVars, startingDerivatives);
@@ -153,8 +159,7 @@ public class MethodAnalyser {
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
             String name = Mnemonic.OPCODE[opcode];
-            System.out.println(fileName + ":" + getLineNumber(index));
-            System.out.println("Instruction at index " + index + ": " + name);
+            logger.debug("{}:{} instruction:{} {}", fileName, getLineNumber(index), index, name);
 
             if (matchConstLoad(name) || matchConstLoadFromPool(name)) {
                 stack.push(createNonDerivative(getLineNumber(index)));
@@ -195,8 +200,10 @@ public class MethodAnalyser {
                 }
             } else if (matchInvokeVirtual(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
-                var returnEntity =  analyseVirtualMethod(methodIndex);
-                stack.push(returnEntity);
+                analyseAnotherMethod(methodIndex, stack);
+            } else if (matchInvokeStatic(name)) {
+                var methodIndex = parseNextBytes(iterator, index, 2);
+                analyseAnotherMethod(methodIndex, stack);
             } else if (matchReturnVoid(name)) {
                 state.updateReturnState(new UndefinedEntity());
             } else if (matchReturnValue(name)) {
@@ -205,9 +212,8 @@ public class MethodAnalyser {
             } else if (matchGetField(name)) {
                 var obj = state.getVarValue(0);
 
-            }
-            else if (!matchIf(name) && !matchGoto(name)) {
-                System.out.println("UNKNOWN OPCODE: " + name);
+            } else if (!matchIf(name) && !matchGoto(name)) {
+                logger.warn("UNKNOWN OPCODE: {}", name);
             }
 
             index += opcodeLength[opcode];
@@ -251,8 +257,48 @@ public class MethodAnalyser {
         }
     }
 
-    private Entity analyseVirtualMethod(int index) {
-        System.out.println(index);
+    private void analyseAnotherMethod(int index, ArrayDeque<Entity> stack) {
+
+        var constPool = method.getDeclaringClass().getClassFile().getConstPool();
+
+        int methodRefIndex = constPool.getMethodrefClass(index);
+        String className = constPool.getClassInfo(methodRefIndex);
+        String methodName = constPool.getMethodrefName(index);
+        String methodDescriptor = constPool.getMethodrefType(index);
+
+        logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
+
+
+        try {
+            CtClass[] parameterTypes = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool());
+            logger.debug("Number of arguments: {}", parameterTypes.length);
+            for (CtClass paramType : parameterTypes) {
+                logger.debug("Parameter Type: {}", paramType.getName());
+            }
+
+            int numberOfArguments = parameterTypes.length;
+            List<Integer> derivativeArgs = new ArrayList<>();
+            for (int i = 0; i < numberOfArguments; i++) {
+                if (stack.pop().isDerivative()) {
+                    derivativeArgs.add(i);
+                }
+            }
+
+            MethodAnalyser analyser = mainAnalyser.analyseMethod(className, methodName, derivativeArgs);
+
+            var result = analyser.getAnalysisResult().getReturnState();
+            if (!result.isUndefined()) {
+                stack.push(result);
+            }
+
+
+        } catch (NotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    private Entity analyseStaticMethod(int index) {
         var classFile = method.getDeclaringClass().getClassFile();
         var constPool = classFile.getConstPool();
 
@@ -261,9 +307,7 @@ public class MethodAnalyser {
         String methodName = constPool.getMethodrefName(index);
         String methodDescriptor = constPool.getMethodrefType(index);
 
-        System.out.println("Class Name: " + className);
-        System.out.println("Method Name: " + methodName);
-        System.out.println("Method Descriptor: " + methodDescriptor);
+        logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
 
         MethodAnalyser analyser = mainAnalyser.analyseMethod(className, methodName, List.of(0));
         return analyser.getAnalysisResult().getReturnState();

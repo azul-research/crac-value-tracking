@@ -1,5 +1,7 @@
 package examples.example8;
 
+import static examples.example8.Function.f;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -9,8 +11,4 @@ public class Main {
         int a = f(s);
     }
 
-    static int f(String s) {
-        int i = 0;
-        return i;
-    }
 }
