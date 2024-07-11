@@ -37,6 +37,7 @@ public class MethodAnalyser {
     int endBlock;
     int numOfVars;
     String fileName;
+    Entity thisObj;
 
     Analyser mainAnalyser;
     CtMethod method;
@@ -45,8 +46,9 @@ public class MethodAnalyser {
 
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
-    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtMethod method, List<Integer> derivativeVars, Analyser mainAnalyser) {
+    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtMethod method, List<Integer> derivativeVars, Analyser mainAnalyser, Entity thisObject) {
 
+        this.thisObj = thisObject;
         this.mainAnalyser = mainAnalyser;
         this.codeAttribute = method.getMethodInfo().getCodeAttribute();
         this.method = method;
@@ -210,7 +212,7 @@ public class MethodAnalyser {
                 var value = stack.pop();
                 state.updateReturnState(value);
             } else if (matchGetField(name)) {
-                var obj = state.getVarValue(0);
+
 
             } else if (!matchIf(name) && !matchGoto(name)) {
                 logger.warn("UNKNOWN OPCODE: {}", name);
@@ -376,6 +378,11 @@ public class MethodAnalyser {
         for (var pred : predecessors) {
             if (pred.isDerivative()) {
                 if (((DerivativeEntity) pred).containsEntity(entity)) {
+                    return true;
+                }
+            }
+            if (entity.isDerivative()) {
+                if (((DerivativeEntity) entity).containsEntity(pred)) {
                     return true;
                 }
             }
