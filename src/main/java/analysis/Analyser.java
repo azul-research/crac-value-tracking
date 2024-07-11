@@ -35,8 +35,8 @@ public class Analyser {
     }
 
 
-    public void analyseProgram() {
-        analyseMethod(mainClassName, "main", List.of(0));
+    public MethodAnalyser analyseProgram() {
+        return analyseMethod(mainClassName, "main", List.of(0));
 
     }
 }
