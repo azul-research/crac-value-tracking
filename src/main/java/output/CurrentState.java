@@ -26,7 +26,7 @@ public class CurrentState {
     }
     public CurrentState(Entity[] variables) {
         this.variablesArray = variables;
-        returnState = new UndefinedEntity();
+        returnState = new Entity(Entity.Type.UNDEFINED);
     }
 
     public CurrentState(CurrentState state) {
@@ -38,9 +38,9 @@ public class CurrentState {
         Entity[] vars = new Entity[numberOfVars];
         for (int i = 0; i < numberOfVars; i++) {
             if (derivatives.containsKey(i)) {
-                vars[i] = new DerivativeSet(new RootDerivative(derivatives.get(i)));
+                vars[i] = new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative(derivatives.get(i)));
             } else {
-                vars[i] = new UndefinedEntity();
+                vars[i] = new Entity(Entity.Type.UNDEFINED);
             }
         }
         return new CurrentState(vars);

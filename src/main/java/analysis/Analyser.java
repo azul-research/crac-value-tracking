@@ -1,6 +1,6 @@
 package analysis;
 
-import entitites.UndefinedEntity;
+import entitites.Entity;
 import input.ControlFlowGraph;
 
 import java.util.List;
@@ -28,7 +28,7 @@ public class Analyser {
         var methodCFG = controlFlowGraph.getClassCFG(className).getMethodCFG(methodName);
         var method = controlFlowGraph.getMethod(className, methodName);
 
-        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, new UndefinedEntity());
+        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, new Entity(Entity.Type.UNDEFINED));
         analyser.analyse();
 
         return analyser;

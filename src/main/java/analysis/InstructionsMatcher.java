@@ -54,7 +54,7 @@ public class InstructionsMatcher {
     }
 
     public static boolean matchGoto(String opcode) {
-        return opcode.equals("goto");
+        return opcode.startsWith("goto");
     }
 
     public static boolean matchCreateArray(String opcode) {
@@ -62,7 +62,10 @@ public class InstructionsMatcher {
     }
 
     public static boolean matchStoreToArray(String opcode) {
-        return opcode.equals("aastore");
+        String regex = ".astore";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(opcode);
+        return matcher.matches();
     }
 
     public static boolean matchIncrementLocal(String opcode) {
@@ -80,6 +83,15 @@ public class InstructionsMatcher {
     public static boolean matchGetField(String opcode) {
         return opcode.equals("getfield");
     }
+
+    public static boolean matchGetStatic(String opcode) {
+        return opcode.equals("getstatic");
+    }
+
+    public static boolean matchGetArrayLength(String opcode) {
+        return opcode.equals("arraylength");
+    }
+
 
     public static boolean matchReturnValue(String opcode) {
         String regex = ".return";

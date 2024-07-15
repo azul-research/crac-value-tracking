@@ -1,8 +1,7 @@
 package analysis;
 
 import entitites.*;
-import entitites.DerivativeSet;
-import entitites.derivatives.Derivative;
+//import entitites.DerivativeSet;
 import entitites.derivatives.OperationDerivative;
 import javassist.CtClass;
 import javassist.CtMethod;
@@ -187,15 +186,12 @@ public class MethodAnalyser {
                 stack.push(createMergedEntity(first, second, getLineNumber(index)));
             } else if (matchCreateArray(name)) {
                 processCreateArray(index, stack, iterator);
-//            } else if (matchStoreToArray(name)) {
-//                var value = stack.pop();
-//                var ind = stack.pop();
-//                var arrayRef = stack.pop();
-//                processStoreToArray(index);
+            } else if (matchStoreToArray(name)) {
+                processStoreToArray(index, stack);
             } else if (matchIncrementLocal(name)) {
                 var varIndex = parseNextBytes(iterator, index, 1);
                 if (state.isDerivative(varIndex)) {
-                    state.updateVariable(varIndex, createDerivativeSuccessor((DerivativeSet) state.getVarValue(index), getLineNumber(index)));
+                    state.updateVariable(varIndex, createDerivativeSuccessor(state.getVarValue(index), getLineNumber(index)));
                 } else {
                     state.updateVariable(varIndex, createNonDerivative());
                 }
@@ -206,14 +202,24 @@ public class MethodAnalyser {
                 var methodIndex = parseNextBytes(iterator, index, 2);
                 analyseAnotherMethod(methodIndex, stack);
             } else if (matchReturnVoid(name)) {
-                state.updateReturnState(new UndefinedEntity());
+                state.updateReturnState(createdUndefined());
             } else if (matchReturnValue(name)) {
                 var value = stack.pop();
                 state.updateReturnState(value);
             } else if (matchGetField(name)) {
+                var value = stack.pop();
+                if (value.isDerivativeSet()) {
+                    stack.push(createDerivativeSuccessor(value, getLineNumber(index)));
+                } else {
+                    stack.push(createNonDerivative());
+                }
 
-
-            } else if (!matchIf(name) && !matchGoto(name)) {
+            } else if (matchGetStatic(name)) {
+                stack.push(createNonDerivative());
+            } else if (matchGetArrayLength(name)) {
+                stack.push(createNonDerivative());
+            }
+            else if (!matchIf(name) && !matchGoto(name)) {
                 logger.warn("UNKNOWN OPCODE: {}", name);
             }
 
@@ -222,7 +228,23 @@ public class MethodAnalyser {
         }
     }
 
-    private void processStoreToArray(int index) {
+    private Entity createdUndefined() {
+        return new Entity(Entity.Type.UNDEFINED);
+    }
+
+    private void processStoreToArray(int index, ArrayDeque<Entity> stack) {
+        var value = stack.pop();
+        var ind = stack.pop();
+        var arrayRef = stack.pop();
+
+        if (value.isDerivativeSet()) {
+            if (arrayRef.isNonDerivative()) {
+                arrayRef.setToDerivative();
+                for (var derivative : value.getDerivativeSet()) {
+                    arrayRef.addDerivative(new OperationDerivative(getLineNumber(index), derivative));
+                }
+            }
+        }
 
     }
 
@@ -230,7 +252,7 @@ public class MethodAnalyser {
         var count = stack.pop();
         var typeRef = parseNextBytes(iterator, index, 2);
         if (count.isDerivativeSet()) {
-            stack.push(createDerivativeSuccessor((DerivativeSet) count, getLineNumber(index)));
+            stack.push(createDerivativeSuccessor(count, getLineNumber(index)));
         } else {
             stack.push(createNonDerivative());
         }
@@ -240,7 +262,7 @@ public class MethodAnalyser {
     void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int varNumber) {
         var valueOnStack = stack.pop();
         if (valueOnStack.isDerivativeSet()) {
-            state.updateVariable(varNumber, createDerivativeSuccessor((DerivativeSet) valueOnStack, getLineNumber(index)));
+            state.updateVariable(varNumber, createDerivativeSuccessor(valueOnStack, getLineNumber(index)));
         } else {
             state.updateVariable(varNumber, valueOnStack);
         }
@@ -252,7 +274,7 @@ public class MethodAnalyser {
         } else if (first.compareType(second) < 0) {
             return second;
         } else if (first.compareType(second) == 0 && first.isDerivativeSet()) {
-            return createMergedDerivative((DerivativeSet) first, (DerivativeSet) second, codeLine);
+            return createMergedDerivative(first, second, codeLine);
         } else {
             return first;
         }
@@ -260,13 +282,15 @@ public class MethodAnalyser {
     }
 
 
-    private DerivativeSet createMergedDerivative(DerivativeSet first, DerivativeSet second, int codeLine) {
+    private Entity createMergedDerivative(Entity first, Entity second, int codeLine) {
+        assert first.isDerivativeSet();
+        assert second.isDerivativeSet();
 
-        DerivativeSet result = new DerivativeSet();
+        Entity result = new Entity(Entity.Type.DERIVATIVE_SET);
 
-        for (var pred1 : first.getPredecessors()) {
-            for (var pred2 : second.getPredecessors()) {
-                result.addPredecessors(new OperationDerivative(codeLine, pred1, pred2));
+        for (var pred1 : first.getDerivativeSet()) {
+            for (var pred2 : second.getDerivativeSet()) {
+                result.addDerivative(new OperationDerivative(codeLine, pred1, pred2));
             }
         }
 
@@ -331,14 +355,14 @@ public class MethodAnalyser {
     }
 
     private Entity createNonDerivative() {
-        return new NonDerivative();
+        return new Entity(Entity.Type.NON_DERIVATIVE);
     }
 
-    private DerivativeSet createDerivativeSuccessor(DerivativeSet oldValue, int line) {
-        DerivativeSet newValue = new DerivativeSet();
+    private Entity createDerivativeSuccessor(Entity oldValue, int line) {
+        Entity newValue = new Entity(Entity.Type.DERIVATIVE_SET);
 
-        for (var pred : oldValue.getPredecessors()) {
-            newValue.addPredecessors(new OperationDerivative(line, pred));
+        for (var pred : oldValue.getDerivativeSet()) {
+            newValue.addDerivative(new OperationDerivative(line, pred));
         }
         return newValue;
     }
@@ -376,7 +400,7 @@ public class MethodAnalyser {
 
 
     Entity mergeEntitiesOfVariable(List<CurrentState> currentStates, int varNumber) {
-        Entity newEntity = new UndefinedEntity();
+        Entity newEntity = new Entity(Entity.Type.UNDEFINED);
 
         for (var state : currentStates) {
             Entity entity = state.getVarValue(varNumber);
@@ -384,7 +408,7 @@ public class MethodAnalyser {
                 newEntity = entity;
             } else if (newEntity.compareType(entity) == 0) {
                 if (newEntity.isDerivativeSet()) {
-                    ((DerivativeSet) newEntity).mergeWithDerivativeSet((DerivativeSet) entity);
+                    newEntity.mergeWithDerivativeSet(entity);
                 }
             }
         }

@@ -1,9 +1,6 @@
 package analysis;
 
-
-import entitites.DerivativeSet;
 import entitites.Entity;
-import entitites.NonDerivative;
 import entitites.derivatives.OperationDerivative;
 import entitites.derivatives.RootDerivative;
 import input.ControlFlowGraph;
@@ -22,9 +19,9 @@ public class MethodAnalyserTest {
         var result = analyseMainFunction("src/test/java/testJarFiles/main3.jar", "examples.example3.Main");
         Entity[] expected = new Entity[3];
 
-        expected[0] = new DerivativeSet(new RootDerivative("args"));
-        expected[1] = new NonDerivative();
-        expected[2] = new DerivativeSet(new OperationDerivative(6, new RootDerivative("args")));
+        expected[0] = new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative("args"));
+        expected[1] = new Entity(Entity.Type.NON_DERIVATIVE);
+        expected[2] = new Entity(Entity.Type.DERIVATIVE_SET , new OperationDerivative(6, new RootDerivative("args")));
         assertArrayEquals(expected, result.getVariablesArray());
     }
 
@@ -33,9 +30,9 @@ public class MethodAnalyserTest {
     public void analysisWithIfTest() {
         var result = analyseMainFunction("src/test/java/testJarFiles/main5.jar", "examples.example5.Main");
         Entity[] expected = new Entity[3];
-        expected[0] = new DerivativeSet(new RootDerivative("args"));
-        expected[1] = new DerivativeSet(new OperationDerivative(9, new RootDerivative("args")));
-        expected[2] = new NonDerivative();
+        expected[0] = new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative("args"));
+        expected[1] = new Entity(Entity.Type.DERIVATIVE_SET, new OperationDerivative(9, new RootDerivative("args")));
+        expected[2] = new Entity(Entity.Type.NON_DERIVATIVE);
         assertArrayEquals(expected, result.getVariablesArray());
     }
 
@@ -44,9 +41,9 @@ public class MethodAnalyserTest {
     public void analysisWithWhileTest() {
         var result = analyseMainFunction("src/test/java/testJarFiles/main2.jar", "examples.example2.Main");
         Entity[] expected = new Entity[3];
-        expected[0] = new DerivativeSet(new RootDerivative("args"));
-        expected[1] = new NonDerivative();
-        expected[2] = new DerivativeSet(new OperationDerivative(9, new RootDerivative("args")));
+        expected[0] = new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative("args"));
+        expected[1] = new Entity(Entity.Type.NON_DERIVATIVE);
+        expected[2] = new Entity(Entity.Type.DERIVATIVE_SET, new OperationDerivative(9, new RootDerivative("args")));
 
         assertArrayEquals(expected, result.getVariablesArray());
     }
@@ -56,10 +53,10 @@ public class MethodAnalyserTest {
     public void analysisWithNestedIfTest() {
         var result = analyseMainFunction("src/test/java/testJarFiles/main1.jar", "examples.example1.Main");
         Entity[] expected = new Entity[4];
-        expected[0] = new DerivativeSet(new RootDerivative("args"));
-        expected[1] = new DerivativeSet(new OperationDerivative(11, new RootDerivative("args")));
-        expected[2] = new DerivativeSet(new OperationDerivative(14, new RootDerivative("args")));
-        expected[3] = new NonDerivative();
+        expected[0] = new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative("args"));
+        expected[1] = new Entity(Entity.Type.DERIVATIVE_SET, new OperationDerivative(11, new RootDerivative("args")));
+        expected[2] = new Entity(Entity.Type.DERIVATIVE_SET, new OperationDerivative(14, new RootDerivative("args")));
+        expected[3] = new Entity(Entity.Type.NON_DERIVATIVE);
         assertArrayEquals(expected, result.getVariablesArray());
 
     }
@@ -68,13 +65,13 @@ public class MethodAnalyserTest {
     public void analysisWithIfsAndWhiles() {
         var result = analyseMainFunction("src/test/java/testJarFiles/main7.jar", "examples.example7.Main");
         Entity[] expected = new Entity[4];
-        expected[0] = new DerivativeSet(new RootDerivative("args"));
-        expected[1] = new NonDerivative();
+        expected[0] = new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative("args"));
+        expected[1] = new Entity(Entity.Type.NON_DERIVATIVE);
 
-        expected[2] = new DerivativeSet(new OperationDerivative(12, new RootDerivative("args")));
-        ((DerivativeSet) expected[2]).addPredecessors(new OperationDerivative(15, new OperationDerivative(7, new RootDerivative("args"))));
+        expected[2] = new Entity(Entity.Type.DERIVATIVE_SET, new OperationDerivative(12, new RootDerivative("args")));
+        expected[2].addDerivative(new OperationDerivative(15, new OperationDerivative(7, new RootDerivative("args"))));
 
-        expected[3] = new DerivativeSet(new OperationDerivative(7, new RootDerivative("args")));
+        expected[3] = new Entity(Entity.Type.DERIVATIVE_SET, new OperationDerivative(7, new RootDerivative("args")));
         assertArrayEquals(expected, result.getVariablesArray());
 
     }
