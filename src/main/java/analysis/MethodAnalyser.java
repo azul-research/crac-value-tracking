@@ -2,7 +2,8 @@ package analysis;
 
 import entitites.*;
 import entitites.DerivativeSet;
-import entitites.derivatives.OpDerivative;
+import entitites.derivatives.Derivative;
+import entitites.derivatives.OperationDerivative;
 import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.NotFoundException;
@@ -183,7 +184,7 @@ public class MethodAnalyser {
             } else if (matchBinOperation(name)) {
                 var first = stack.pop();
                 var second = stack.pop();
-                stack.push(createMergedSuccessor(first, second, getLineNumber(index)));
+                stack.push(createMergedEntity(first, second, getLineNumber(index)));
             } else if (matchCreateArray(name)) {
                 processCreateArray(index, stack, iterator);
 //            } else if (matchStoreToArray(name)) {
@@ -245,8 +246,32 @@ public class MethodAnalyser {
         }
     }
 
-    private Entity createMergedSuccessor(Entity first, Entity second, int codeLine) {
-        return null;
+    private Entity createMergedEntity(Entity first, Entity second, int codeLine) {
+        if (first.compareType(second) > 0) {
+            return first;
+        } else if (first.compareType(second) < 0) {
+            return second;
+        } else if (first.compareType(second) == 0 && first.isDerivativeSet()) {
+            return createMergedDerivative((DerivativeSet) first, (DerivativeSet) second, codeLine);
+        } else {
+            return first;
+        }
+
+    }
+
+
+    private DerivativeSet createMergedDerivative(DerivativeSet first, DerivativeSet second, int codeLine) {
+
+        DerivativeSet result = new DerivativeSet();
+
+        for (var pred1 : first.getPredecessors()) {
+            for (var pred2 : second.getPredecessors()) {
+                result.addPredecessors(new OperationDerivative(codeLine, pred1, pred2));
+            }
+        }
+
+        return result;
+
     }
 
     private void analyseAnotherMethod(int index, ArrayDeque<Entity> stack) {
@@ -313,7 +338,7 @@ public class MethodAnalyser {
         DerivativeSet newValue = new DerivativeSet();
 
         for (var pred : oldValue.getPredecessors()) {
-            newValue.addPredecessors(new OpDerivative(line, pred));
+            newValue.addPredecessors(new OperationDerivative(line, pred));
         }
         return newValue;
     }
