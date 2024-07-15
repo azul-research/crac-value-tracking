@@ -154,7 +154,7 @@ public class MethodAnalyser {
         var iterator = codeAttribute.iterator();
         int index = blockIndex;
 
-        ArrayDeque<Entity> stack = new ArrayDeque<>();
+        ArrayDeque<Entity> stack = state.getStack();
 
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
@@ -195,7 +195,7 @@ public class MethodAnalyser {
                 } else {
                     state.updateVariable(varIndex, createNonDerivative());
                 }
-            } else if (matchInvokeVirtual(name)) {
+            } else if (matchInvokeVirtual(name) | matchInvokeDynamic(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
                 analyseAnotherMethod(methodIndex, stack);
             } else if (matchInvokeStatic(name)) {
@@ -215,6 +215,8 @@ public class MethodAnalyser {
                 }
 
             } else if (matchGetStatic(name)) {
+                // TODO
+                // symbolic reference
                 stack.push(createNonDerivative());
             } else if (matchGetArrayLength(name)) {
                 stack.push(createNonDerivative());
@@ -226,6 +228,8 @@ public class MethodAnalyser {
             index += opcodeLength[opcode];
 
         }
+
+//        state.updateStack(stack);
     }
 
     private Entity createdUndefined() {
@@ -384,18 +388,45 @@ public class MethodAnalyser {
             return new CurrentState(currentStates.getFirst());
         }
 
-        CurrentState stateResult = CurrentState.getEmptyState(numOfVars, startingDerivatives);
+        CurrentState curStateResult = CurrentState.getEmptyState(numOfVars, startingDerivatives);
         if (currentStates.isEmpty()) {
-            return stateResult;
+            return curStateResult;
         }
 
-        Entity newEntity;
+        if (!currentStates.getFirst().getStack().isEmpty()) {
+            curStateResult.updateStack(mergeStacks(currentStates));
+        }
+
         for (int i = 0; i < numOfVars; i++) {
-            newEntity = mergeEntitiesOfVariable(currentStates, i);
-            stateResult.updateVariable(i, newEntity);
+            curStateResult.updateVariable(i, mergeEntitiesOfVariable(currentStates, i));
         }
 
-        return stateResult;
+        return curStateResult;
+    }
+
+    private ArrayDeque<Entity> mergeStacks(List<CurrentState> currentStates) {
+
+        int stackSize = currentStates.getFirst().getStack().size();
+        Entity[] result = new Entity[stackSize];
+
+        for (int i = 0; i < stackSize; i++) {
+            Entity newEntity = new Entity(Entity.Type.UNDEFINED);
+
+            for (var state: currentStates) {
+                Entity entity = state.getStack().toArray(Entity[]::new)[i];
+                if (newEntity.compareType(entity) < 0) {
+                    newEntity = entity;
+                } else if (newEntity.compareType(entity) == 0) {
+                    if (newEntity.isDerivativeSet()) {
+                        newEntity.mergeWithDerivativeSet(entity);
+                    }
+                }
+            }
+            result[i] = newEntity;
+        }
+
+        return new ArrayDeque<>(Arrays.asList(result));
+
     }
 
 
@@ -415,6 +446,7 @@ public class MethodAnalyser {
 
         return newEntity;
     }
+
 
     private int getNumberInOpCode(String opCode) {
         String regex = ".*_(.*)";

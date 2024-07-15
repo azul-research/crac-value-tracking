@@ -76,6 +76,10 @@ public class InstructionsMatcher {
         return opcode.equals("invokevirtual");
     }
 
+    public static boolean matchInvokeDynamic(String opcode) {
+        return opcode.equals("invokedynamic");
+    }
+
     public static boolean matchInvokeStatic(String opcode) {
         return opcode.equals("invokestatic");
     }

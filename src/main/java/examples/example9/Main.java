@@ -5,9 +5,13 @@ public class Main {
 
         String s = args[0];
 
-        int k = s.length();
+        String t = args[1];
 
-        int a = f(s);
+        String r = s + t;
+
+//        int k = s.length();
+//
+//        int a = f(s);
     }
 
     static int f(String s) {

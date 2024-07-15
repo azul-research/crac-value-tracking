@@ -10,7 +10,16 @@ public class CurrentState {
 
     private final Entity[] variablesArray;
     private Entity returnState;
+    private ArrayDeque<Entity> stack;
 
+
+    public ArrayDeque<Entity> getStack() {
+        return stack;
+    }
+
+    public void updateStack(ArrayDeque<Entity> stack) {
+        this.stack = stack;
+    }
 
     public Entity[] getVariablesArray() {
         return variablesArray;
@@ -24,14 +33,16 @@ public class CurrentState {
     public void updateReturnState(Entity entity) {
         this.returnState = entity;
     }
-    public CurrentState(Entity[] variables) {
+    public CurrentState(Entity[] variables, ArrayDeque<Entity> stack) {
         this.variablesArray = variables;
         returnState = new Entity(Entity.Type.UNDEFINED);
+        this.stack = stack;
     }
 
     public CurrentState(CurrentState state) {
         this.variablesArray = state.variablesArray.clone();
         this.returnState = state.returnState;
+        this.stack = state.stack;
     }
 
     public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives) {
@@ -43,7 +54,7 @@ public class CurrentState {
                 vars[i] = new Entity(Entity.Type.UNDEFINED);
             }
         }
-        return new CurrentState(vars);
+        return new CurrentState(vars, new ArrayDeque<>());
     }
 
 
@@ -71,6 +82,7 @@ public class CurrentState {
     public int hashCode() {
         return Arrays.hashCode(variablesArray);
     }
+
 
 
 }
