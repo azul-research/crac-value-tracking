@@ -2,19 +2,18 @@ package entitites.derivatives;
 
 import java.util.Objects;
 
-public class RootDerivative extends DerivativeEntity {
+public class RootDerivative extends Derivative {
     String name;
-    public RootDerivative(String name, DerivativeEntity... derivatives) {
-        super(0, derivatives);
+    public RootDerivative(String name) {
+        super();
         this.name = name;
     }
 
 
     @Override
     public String info(int tabNumber) {
-        return ("\t".repeat(tabNumber) + "root derivative " + name);
+        return "\t".repeat(tabNumber) + "root derivative " + name;
     }
-
 
     @Override
     public boolean equals(Object o) {
@@ -22,11 +21,11 @@ public class RootDerivative extends DerivativeEntity {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         RootDerivative that = (RootDerivative) o;
-        return name.equals(that.name);
+        return Objects.equals(name, that.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), name);
+        return Objects.hashCode(name);
     }
 }

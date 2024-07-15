@@ -2,12 +2,10 @@ package entitites;
 
 import java.util.Objects;
 
-public class Entity {
-    protected int line;
+public abstract class Entity {
 //    int varNumber;
 
-    public Entity(int line) {
-        this.line = line;
+    public Entity() {
 //        this.varNumber = varNumber;
     }
 
@@ -16,28 +14,28 @@ public class Entity {
     }
 
     public boolean isNonDerivative() {
-        return this.getClass() == NonDerivativeEntity.class;
+        return this.getClass() == NonDerivative.class;
     }
 
-    public boolean isDerivative() {
-        return !isUndefined() && !isNonDerivative();
+    public boolean isDerivativeSet() {
+        return this.getClass() == DerivativeSet.class;
     }
 
-    public String info(int tabNumber) {
-        return "";
-    }
-
+    public abstract String info(int tabNumber);
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Entity entity = (Entity) o;
-        return line == entity.line;
+    public boolean equals(Object obj) {
+        return this.getClass() == obj.getClass();
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(line);
+    public int compareType(Entity entity) {
+        if (this.getClass() == entity.getClass()) {
+            return 0;
+        } else if (this.isDerivativeSet() || entity.isUndefined()) {
+            return 1;
+        } else {
+            return -1;
+        }
     }
+
 }

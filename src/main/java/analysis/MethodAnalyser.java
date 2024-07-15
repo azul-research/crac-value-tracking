@@ -1,10 +1,8 @@
 package analysis;
 
 import entitites.*;
-import entitites.derivatives.DerivativeEntity;
+import entitites.DerivativeSet;
 import entitites.derivatives.OpDerivative;
-import entitites.derivatives.PhiDerivative;
-import entitites.derivatives.StraightDerivative;
 import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.NotFoundException;
@@ -164,7 +162,7 @@ public class MethodAnalyser {
             logger.debug("{}:{} instruction:{} {}", fileName, getLineNumber(index), index, name);
 
             if (matchConstLoad(name) || matchConstLoadFromPool(name)) {
-                stack.push(createNonDerivative(getLineNumber(index)));
+                stack.push(createNonDerivative());
 
             } else if (matchStoreData(name)) {
                 var varNumber = getNumberInOpCode(name);
@@ -196,9 +194,9 @@ public class MethodAnalyser {
             } else if (matchIncrementLocal(name)) {
                 var varIndex = parseNextBytes(iterator, index, 1);
                 if (state.isDerivative(varIndex)) {
-                    state.updateVariable(varIndex, createSuccessor(state.getVarValue(index), getLineNumber(index)));
+                    state.updateVariable(varIndex, createDerivativeSuccessor((DerivativeSet) state.getVarValue(index), getLineNumber(index)));
                 } else {
-                    state.updateVariable(varIndex, createNonDerivative(getLineNumber(index)));
+                    state.updateVariable(varIndex, createNonDerivative());
                 }
             } else if (matchInvokeVirtual(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
@@ -230,33 +228,25 @@ public class MethodAnalyser {
     private void processCreateArray(int index, ArrayDeque<Entity> stack, CodeIterator iterator) {
         var count = stack.pop();
         var typeRef = parseNextBytes(iterator, index, 2);
-        if (count.isDerivative()) {
-            stack.push(createSuccessor(count, getLineNumber(index)));
+        if (count.isDerivativeSet()) {
+            stack.push(createDerivativeSuccessor((DerivativeSet) count, getLineNumber(index)));
         } else {
-            stack.push(createNonDerivative(getLineNumber(index)));
+            stack.push(createNonDerivative());
         }
     }
 
 
     void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int varNumber) {
         var valueOnStack = stack.pop();
-        if (valueOnStack.isDerivative()) {
-            state.updateVariable(varNumber, createSuccessor(valueOnStack, getLineNumber(index)));
+        if (valueOnStack.isDerivativeSet()) {
+            state.updateVariable(varNumber, createDerivativeSuccessor((DerivativeSet) valueOnStack, getLineNumber(index)));
         } else {
-            state.updateVariable(varNumber, createNonDerivative(getLineNumber(index)));
+            state.updateVariable(varNumber, valueOnStack);
         }
     }
 
     private Entity createMergedSuccessor(Entity first, Entity second, int codeLine) {
-        if (first.isNonDerivative() && second.isNonDerivative()) {
-            return new NonDerivativeEntity(codeLine);
-        } else if (first.isDerivative() && second.isDerivative()) {
-            return new OpDerivative(codeLine, first, second);
-        } else if (first.isDerivative()) {
-            return createSuccessor(first, codeLine);
-        } else {
-            return createSuccessor(second, codeLine);
-        }
+        return null;
     }
 
     private void analyseAnotherMethod(int index, ArrayDeque<Entity> stack) {
@@ -281,7 +271,7 @@ public class MethodAnalyser {
             int numberOfArguments = parameterTypes.length;
             List<Integer> derivativeArgs = new ArrayList<>();
             for (int i = 0; i < numberOfArguments; i++) {
-                if (stack.pop().isDerivative()) {
+                if (stack.pop().isDerivativeSet()) {
                     derivativeArgs.add(i);
                 }
             }
@@ -315,81 +305,66 @@ public class MethodAnalyser {
         return analyser.getAnalysisResult().getReturnState();
     }
 
-    private Entity createNonDerivative(int line) {
-        return new NonDerivativeEntity(line);
+    private Entity createNonDerivative() {
+        return new NonDerivative();
     }
 
-    private DerivativeEntity createSuccessor(Entity oldValue, int line) {
-        return new StraightDerivative(line, oldValue);
+    private DerivativeSet createDerivativeSuccessor(DerivativeSet oldValue, int line) {
+        DerivativeSet newValue = new DerivativeSet();
+
+        for (var pred : oldValue.getPredecessors()) {
+            newValue.addPredecessors(new OpDerivative(line, pred));
+        }
+        return newValue;
     }
 
     private CurrentState getStartingState(int index) {
         var block = methodCFG.get(index);
         int num = block.incomings();
-        List<ControlFlow.Block> predecessors = new ArrayList<>();
+        List<CurrentState> predecessors = new ArrayList<>();
+        int blockIndex;
         for (int i = 0; i < num; i++) {
-            predecessors.add(block.incoming(i));
+            blockIndex = block.incoming(i).position();
+            predecessors.add(currentBlocksStates.get(blockIndex));
         }
         return mergeCurStates(predecessors);
     }
 
-    private CurrentState mergeCurStates(List<ControlFlow.Block> blocks) {
-
-        if (blocks.size() == 1) {
-            return new CurrentState(currentBlocksStates.get(blocks.getFirst().position()));
-        }
-        CurrentState state = CurrentState.getEmptyState(numOfVars, startingDerivatives);
-
-        if (blocks.isEmpty()) {
-            return state;
+    private CurrentState mergeCurStates(List<CurrentState> currentStates) {
+        if (currentStates.size() == 1) {
+            return new CurrentState(currentStates.getFirst());
         }
 
+        CurrentState stateResult = CurrentState.getEmptyState(numOfVars, startingDerivatives);
+        if (currentStates.isEmpty()) {
+            return stateResult;
+        }
+
+        Entity newEntity;
         for (int i = 0; i < numOfVars; i++) {
-            ArrayList<Entity> predecessors = new ArrayList<>();
-            Set<Entity> predecessorsSet = new HashSet<>();
-
-            for (var bl : blocks) {
-                Entity entity = currentBlocksStates.get(bl.position()).getVarValue(i);
-                if (entity.isNonDerivative() && predecessorsSet.stream().anyMatch(Entity::isNonDerivative)) {
-                    continue;
-                }
-                if (!entity.isUndefined() && !setContainsEntity(predecessorsSet, entity)) {
-                    predecessorsSet.add(entity);
-                    predecessors.add(entity);
-                }
-            }
-
-            if (predecessors.size() == 1) {
-                state.updateVariable(i, predecessors.getFirst());
-            } else {
-                state.updateVariable(i, new PhiDerivative(0, predecessors.toArray(Entity[]::new)));
-            }
+            newEntity = mergeEntitiesOfVariable(currentStates, i);
+            stateResult.updateVariable(i, newEntity);
         }
 
-        return state;
+        return stateResult;
     }
 
 
-    boolean setContainsEntity(Set<Entity> set, Entity entity) {
-        if (set.contains(entity)) {
-            return true;
-        }
-        var predecessors = set.toArray(Entity[]::new);
-        for (var pred : predecessors) {
-            if (pred.isDerivative()) {
-                if (((DerivativeEntity) pred).containsEntity(entity)) {
-                    return true;
-                }
-            }
-            if (entity.isDerivative()) {
-                if (((DerivativeEntity) entity).containsEntity(pred)) {
-                    return true;
+    Entity mergeEntitiesOfVariable(List<CurrentState> currentStates, int varNumber) {
+        Entity newEntity = new UndefinedEntity();
+
+        for (var state : currentStates) {
+            Entity entity = state.getVarValue(varNumber);
+            if (newEntity.compareType(entity) < 0) {
+                newEntity = entity;
+            } else if (newEntity.compareType(entity) == 0) {
+                if (newEntity.isDerivativeSet()) {
+                    ((DerivativeSet) newEntity).mergeWithDerivativeSet((DerivativeSet) entity);
                 }
             }
         }
 
-        return false;
-
+        return newEntity;
     }
 
     private int getNumberInOpCode(String opCode) {

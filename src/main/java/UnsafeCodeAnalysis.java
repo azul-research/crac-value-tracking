@@ -1,15 +1,11 @@
 import analysis.Analyser;
-import analysis.MethodAnalyser;
-import input.ControlFlowGraph;
 
 
 import java.io.IOException;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 
-import static input.BytecodeExtractor.*;
 
 public class UnsafeCodeAnalysis {
     public static void main(String[] args) throws IOException {

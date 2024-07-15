@@ -8,7 +8,7 @@ import java.util.*;
 public class CurrentState {
 
 
-    private Entity[] variablesArray;
+    private final Entity[] variablesArray;
     private Entity returnState;
 
 
@@ -36,10 +36,9 @@ public class CurrentState {
 
     public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives) {
         Entity[] vars = new Entity[numberOfVars];
-
         for (int i = 0; i < numberOfVars; i++) {
             if (derivatives.containsKey(i)) {
-                vars[i] = new RootDerivative(derivatives.get(i));
+                vars[i] = new DerivativeSet(new RootDerivative(derivatives.get(i)));
             } else {
                 vars[i] = new UndefinedEntity();
             }
@@ -53,7 +52,7 @@ public class CurrentState {
     }
 
     public boolean isDerivative(Integer var) {
-        return variablesArray[var].isDerivative();
+        return variablesArray[var].isDerivativeSet();
     }
 
     public Entity getVarValue(int var) {
