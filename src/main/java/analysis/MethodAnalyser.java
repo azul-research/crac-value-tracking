@@ -161,7 +161,7 @@ public class MethodAnalyser {
             String name = Mnemonic.OPCODE[opcode];
             logger.debug("{}:{} instruction:{} {}", fileName, getLineNumber(index), index, name);
 
-            if (matchConstLoad(name) || matchConstLoadFromPool(name)) {
+            if (matchConstLoad(name) || matchConstLoadFromPool(name) || matchByteLoad(name)) {
                 stack.push(createNonDerivative());
 
             } else if (matchStoreData(name)) {
@@ -180,32 +180,35 @@ public class MethodAnalyser {
                 var arrayIndex = stack.pop();
                 var valueOnStack = stack.pop();
                 stack.push(valueOnStack);
+
             } else if (matchBinOperation(name)) {
                 var first = stack.pop();
                 var second = stack.pop();
                 stack.push(createMergedEntity(first, second, getLineNumber(index)));
+
             } else if (matchCreateArray(name)) {
                 processCreateArray(index, stack, iterator);
+
             } else if (matchStoreToArray(name)) {
                 processStoreToArray(index, stack);
+
             } else if (matchIncrementLocal(name)) {
-                var varIndex = parseNextBytes(iterator, index, 1);
-                if (state.isDerivative(varIndex)) {
-                    state.updateVariable(varIndex, createDerivativeSuccessor(state.getVarValue(index), getLineNumber(index)));
-                } else {
-                    state.updateVariable(varIndex, createNonDerivative());
-                }
-            } else if (matchInvokeVirtual(name) | matchInvokeDynamic(name)) {
+                processIncrementLocal(index, state, iterator);
+
+            } else if (matchInvokeVirtual(name) | matchInvokeSpecial(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
                 analyseAnotherMethod(methodIndex, stack);
+
             } else if (matchInvokeStatic(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
                 analyseAnotherMethod(methodIndex, stack);
+
             } else if (matchReturnVoid(name)) {
                 state.updateReturnState(createdUndefined());
+
             } else if (matchReturnValue(name)) {
-                var value = stack.pop();
-                state.updateReturnState(value);
+                state.updateReturnState(stack.pop());
+
             } else if (matchGetField(name)) {
                 var value = stack.pop();
                 if (value.isDerivativeSet()) {
@@ -218,22 +221,29 @@ public class MethodAnalyser {
                 // TODO
                 // symbolic reference
                 stack.push(createNonDerivative());
+
             } else if (matchGetArrayLength(name)) {
                 stack.push(createNonDerivative());
-            }
-            else if (!matchIf(name) && !matchGoto(name)) {
+            } else if (!matchIf(name) && !matchGoto(name)) {
                 logger.warn("UNKNOWN OPCODE: {}", name);
             }
 
             index += opcodeLength[opcode];
 
         }
-
-//        state.updateStack(stack);
     }
 
     private Entity createdUndefined() {
         return new Entity(Entity.Type.UNDEFINED);
+    }
+
+    private void processIncrementLocal(int index, CurrentState state, CodeIterator iterator) {
+        var varIndex = parseNextBytes(iterator, index, 1);
+        if (state.isDerivative(varIndex)) {
+            state.updateVariable(varIndex, createDerivativeSuccessor(state.getVarValue(index), getLineNumber(index)));
+        } else {
+            state.updateVariable(varIndex, createNonDerivative());
+        }
     }
 
     private void processStoreToArray(int index, ArrayDeque<Entity> stack) {
@@ -282,7 +292,6 @@ public class MethodAnalyser {
         } else {
             return first;
         }
-
     }
 
 
@@ -312,7 +321,10 @@ public class MethodAnalyser {
         String methodDescriptor = constPool.getMethodrefType(index);
 
         logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
-
+//
+//        if (!className.startsWith("java.")) {
+//            // resolution
+//        }
 
         try {
             CtClass[] parameterTypes = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool());
@@ -329,7 +341,7 @@ public class MethodAnalyser {
                 }
             }
 
-            MethodAnalyser analyser = mainAnalyser.analyseMethod(className, methodName, derivativeArgs);
+            MethodAnalyser analyser = mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor);
 
             var result = analyser.getAnalysisResult().getReturnState();
             if (!result.isUndefined()) {
@@ -342,21 +354,21 @@ public class MethodAnalyser {
         }
 
     }
-
-    private Entity analyseStaticMethod(int index) {
-        var classFile = method.getDeclaringClass().getClassFile();
-        var constPool = classFile.getConstPool();
-
-        int methodRefIndex = constPool.getMethodrefClass(index);
-        String className = constPool.getClassInfo(methodRefIndex);
-        String methodName = constPool.getMethodrefName(index);
-        String methodDescriptor = constPool.getMethodrefType(index);
-
-        logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
-
-        MethodAnalyser analyser = mainAnalyser.analyseMethod(className, methodName, List.of(0));
-        return analyser.getAnalysisResult().getReturnState();
-    }
+//
+//    private Entity analyseStaticMethod(int index) {
+//        var classFile = method.getDeclaringClass().getClassFile();
+//        var constPool = classFile.getConstPool();
+//
+//        int methodRefIndex = constPool.getMethodrefClass(index);
+//        String className = constPool.getClassInfo(methodRefIndex);
+//        String methodName = constPool.getMethodrefName(index);
+//        String methodDescriptor = constPool.getMethodrefType(index);
+//
+//        logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
+//
+//        MethodAnalyser analyser = mainAnalyser.analyseMethod(className, methodName, List.of(0));
+//        return analyser.getAnalysisResult().getReturnState();
+//    }
 
     private Entity createNonDerivative() {
         return new Entity(Entity.Type.NON_DERIVATIVE);
@@ -412,7 +424,7 @@ public class MethodAnalyser {
         for (int i = 0; i < stackSize; i++) {
             Entity newEntity = new Entity(Entity.Type.UNDEFINED);
 
-            for (var state: currentStates) {
+            for (var state : currentStates) {
                 Entity entity = state.getStack().toArray(Entity[]::new)[i];
                 if (newEntity.compareType(entity) < 0) {
                     newEntity = entity;
@@ -424,11 +436,8 @@ public class MethodAnalyser {
             }
             result[i] = newEntity;
         }
-
         return new ArrayDeque<>(Arrays.asList(result));
-
     }
-
 
     Entity mergeEntitiesOfVariable(List<CurrentState> currentStates, int varNumber) {
         Entity newEntity = new Entity(Entity.Type.UNDEFINED);
@@ -443,19 +452,7 @@ public class MethodAnalyser {
                 }
             }
         }
-
         return newEntity;
-    }
-
-
-    private int getNumberInOpCode(String opCode) {
-        String regex = ".*_(.*)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opCode);
-        if (matcher.matches()) {
-            return Integer.parseInt(matcher.group(1));
-        }
-        return -1;
     }
 
 
@@ -465,7 +462,6 @@ public class MethodAnalyser {
             int indexbyte = (iterator.byteAt(i + index + 1) & 0xff);
             result = result | (indexbyte << (bytesNumber - i - 1) * 8);
         }
-
         return result;
     }
 

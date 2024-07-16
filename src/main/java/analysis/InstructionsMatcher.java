@@ -16,6 +16,10 @@ public class InstructionsMatcher {
         return matcher.matches();
     }
 
+    static boolean matchByteLoad(String opcode) {
+        return opcode.equals("bipush");
+    }
+
     public static boolean matchConstLoadFromPool(String opcode) {
         return opcode.equals("ldc");
     }
@@ -84,6 +88,9 @@ public class InstructionsMatcher {
         return opcode.equals("invokestatic");
     }
 
+    public static boolean matchInvokeSpecial(String opcode) {
+        return opcode.equals("invokespecial");
+    }
     public static boolean matchGetField(String opcode) {
         return opcode.equals("getfield");
     }
@@ -106,5 +113,16 @@ public class InstructionsMatcher {
 
     public static boolean matchReturnVoid(String opcode) {
         return opcode.equals("return");
+    }
+
+
+    public static int getNumberInOpCode(String opCode) {
+        String regex = ".*_(.*)";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(opCode);
+        if (matcher.matches()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        return -1;
     }
 }

@@ -21,12 +21,12 @@ public class Analyser {
 
     }
 
-    public MethodAnalyser analyseMethod(String className, String methodName, List<Integer> derivativeArgs) {
+    public MethodAnalyser analyseMethod(String className, String methodName, List<Integer> derivativeArgs, String desc) {
 
         controlFlowGraph.createClassCFG(className);
 
-        var methodCFG = controlFlowGraph.getClassCFG(className).getMethodCFG(methodName);
-        var method = controlFlowGraph.getMethod(className, methodName);
+        var methodCFG = controlFlowGraph.getClassCFG(className).getMethodCFG(methodName, desc);
+        var method = controlFlowGraph.getMethod(className, methodName, desc);
 
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, new Entity(Entity.Type.UNDEFINED));
         analyser.analyse();
@@ -36,7 +36,7 @@ public class Analyser {
 
 
     public MethodAnalyser analyseProgram() {
-        return analyseMethod(mainClassName, "main", List.of(0));
+        return analyseMethod(mainClassName, "main", List.of(0), "([Ljava/lang/String;)V");
 
     }
 }

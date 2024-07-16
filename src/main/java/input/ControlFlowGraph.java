@@ -41,19 +41,18 @@ public class ControlFlowGraph {
             var classCFG = new ClassCFG();
             classesCFG.put(className, classCFG);
 
-            for (CtMethod method : ctClass.getDeclaredMethods()) {
-//                System.out.println("Analyzing method: " + method.getName());
-                classCFG.addMethodCFG(createMethodCFG(method), method.getName());
+            for (CtMethod method : ctClass.getMethods()) {
+                classCFG.addMethodCFG(createMethodCFG(method), method.getName(), method.getMethodInfo().getDescriptor());
             }
         } catch (NotFoundException | BadBytecode e) {
             throw new RuntimeException(e);
         }
     }
 
-    public CtMethod getMethod(String className, String methodName) {
+    public CtMethod getMethod(String className, String methodName, String desc) {
         try {
             CtClass ctClass = pool.get(className);
-            return ctClass.getDeclaredMethod(methodName);
+            return ctClass.getMethod(methodName, desc);
         } catch (NotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -64,12 +63,8 @@ public class ControlFlowGraph {
 
         MethodInfo methodInfo = method.getMethodInfo();
         ControlFlow controlFlow = new ControlFlow(method.getDeclaringClass(), methodInfo);
-        ControlFlow.Block[] blocks = controlFlow.basicBlocks();
 
-//        for (var block : blocks) {
-//            System.out.println(block.toString());
-//        }
-        return blocks;
+        return controlFlow.basicBlocks();
 
     }
 
