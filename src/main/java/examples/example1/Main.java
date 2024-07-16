@@ -1,6 +1,9 @@
 package examples.example1;
 
 public class Main {
+
+    static public int a = 12;
+
     public static void main(String[] args) {
         String b = "";
         String c = "";

@@ -1,7 +1,6 @@
 package analysis;
 
 import entitites.*;
-//import entitites.DerivativeSet;
 import entitites.derivatives.OperationDerivative;
 import javassist.CtClass;
 import javassist.CtMethod;
@@ -13,9 +12,6 @@ import org.apache.logging.log4j.Logger;
 import output.CurrentState;
 
 import java.util.*;
-
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static analysis.InstructionsMatcher.*;
 
@@ -41,10 +37,12 @@ public class MethodAnalyser {
     CtMethod method;
 
     Map<Integer, String> startingDerivatives;
+    Set<String> startingLoadedClasses;
+    Set<String> startingInitializedClasses;
 
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
-    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtMethod method, List<Integer> derivativeVars, Analyser mainAnalyser, Entity thisObject) {
+    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtMethod method, List<Integer> derivativeVars, Analyser mainAnalyser, Entity thisObject, Set<String> loadedClasses, Set<String> initialisedClasses) {
 
         this.thisObj = thisObject;
         this.mainAnalyser = mainAnalyser;
@@ -62,8 +60,9 @@ public class MethodAnalyser {
         logger.debug("Start block: {}, end block: {}", startBlock, endBlock);
 
         this.numOfVars = codeAttribute.getMaxLocals();
-
-        setCurrentBlocksStates(numOfVars, this.startingDerivatives);
+        this.startingLoadedClasses = loadedClasses;
+        this.startingInitializedClasses = initialisedClasses;
+        setCurrentBlocksStates(numOfVars, this.startingDerivatives, loadedClasses, initialisedClasses);
 
         logger.debug("Number of local variables: {}", numOfVars);
 
@@ -96,10 +95,10 @@ public class MethodAnalyser {
         }
     }
 
-    private void setCurrentBlocksStates(int numOfVars, Map<Integer, String> derivativeVars) {
+    private void setCurrentBlocksStates(int numOfVars, Map<Integer, String> derivativeVars, Set<String> loadedClasses, Set<String> initialisedClasses) {
         currentBlocksStates = new HashMap<>();
         for (var index : methodCFG.keySet()) {
-            currentBlocksStates.put(index, CurrentState.getEmptyState(numOfVars, derivativeVars));
+            currentBlocksStates.put(index, CurrentState.getEmptyState(numOfVars, derivativeVars, loadedClasses, initialisedClasses));
         }
     }
 
@@ -137,7 +136,7 @@ public class MethodAnalyser {
         logger.debug("Analysing block: {}", blockIndex);
         CurrentState state;
         if (blockIndex == startBlock) {
-            state = CurrentState.getEmptyState(numOfVars, startingDerivatives);
+            state = CurrentState.getEmptyState(numOfVars, startingDerivatives, startingLoadedClasses, startingInitializedClasses);
         } else {
             state = getStartingState(blockIndex);
         }
@@ -197,11 +196,11 @@ public class MethodAnalyser {
 
             } else if (matchInvokeVirtual(name) | matchInvokeSpecial(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
-                analyseAnotherMethod(methodIndex, stack);
+                analyseAnotherMethod(methodIndex, stack, state);
 
             } else if (matchInvokeStatic(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
-                analyseAnotherMethod(methodIndex, stack);
+                analyseAnotherMethod(methodIndex, stack, state);
 
             } else if (matchReturnVoid(name)) {
                 state.updateReturnState(createdUndefined());
@@ -311,7 +310,7 @@ public class MethodAnalyser {
 
     }
 
-    private void analyseAnotherMethod(int index, ArrayDeque<Entity> stack) {
+    private void analyseAnotherMethod(int index, ArrayDeque<Entity> stack, CurrentState state) {
 
         var constPool = method.getDeclaringClass().getClassFile().getConstPool();
 
@@ -341,7 +340,7 @@ public class MethodAnalyser {
                 }
             }
 
-            MethodAnalyser analyser = mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor);
+            MethodAnalyser analyser = mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, state.getLoadedClasses(), state.getInitialisedClasses());
 
             var result = analyser.getAnalysisResult().getReturnState();
             if (!result.isUndefined()) {
@@ -400,7 +399,7 @@ public class MethodAnalyser {
             return new CurrentState(currentStates.getFirst());
         }
 
-        CurrentState curStateResult = CurrentState.getEmptyState(numOfVars, startingDerivatives);
+        CurrentState curStateResult = CurrentState.getEmptyState(numOfVars, startingDerivatives, startingLoadedClasses, startingInitializedClasses);
         if (currentStates.isEmpty()) {
             return curStateResult;
         }

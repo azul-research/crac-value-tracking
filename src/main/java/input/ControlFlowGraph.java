@@ -11,17 +11,16 @@ public class ControlFlowGraph {
     private ClassPool pool;
     private final Map<String, ClassCFG> classesCFG = new HashMap<>();
 
-
-    public Map<String, ClassCFG> getCFG() {
-        return classesCFG;
+    public ClassPool getPool() {
+        return pool;
     }
 
-    public ClassCFG getClassCFG(String name) {
-        return classesCFG.get(name);
+    public ControlFlow.Block[] getMethodCFG(String className, String methodName, String methodDesc) {
+        return classesCFG.get(className).getMethodCFG(methodName, methodDesc);
     }
 
-    public ControlFlowGraph(String jarFilePath) {
-        addClassPath(jarFilePath);
+    public ControlFlowGraph(String filePath) {
+        addClassPath(filePath);
     }
 
 
@@ -34,19 +33,26 @@ public class ControlFlowGraph {
         }
     }
 
-
-    public void createClassCFG(String className) {
+    public ControlFlow.Block[] createMethodCFG(String className, String methodName, String desc) {
         try {
             CtClass ctClass = pool.get(className);
-            var classCFG = new ClassCFG();
-            classesCFG.put(className, classCFG);
+            CtMethod method = ctClass.getMethod(methodName, desc);
 
-            for (CtMethod method : ctClass.getMethods()) {
-                classCFG.addMethodCFG(createMethodCFG(method), method.getName(), method.getMethodInfo().getDescriptor());
+            if (!classesCFG.containsKey(className)) {
+                classesCFG.put(className, new ClassCFG());
             }
+            ClassCFG classCFG = classesCFG.get(className);
+
+
+            classCFG.addMethodCFG(createMethodCFG(method), methodName, desc);
+
+            return classCFG.getMethodCFG(methodName, desc);
+
+
         } catch (NotFoundException | BadBytecode e) {
             throw new RuntimeException(e);
         }
+
     }
 
     public CtMethod getMethod(String className, String methodName, String desc) {
@@ -59,13 +65,38 @@ public class ControlFlowGraph {
 
     }
 
-    private ControlFlow.Block[] createMethodCFG(CtMethod method) throws BadBytecode {
+
+    public ControlFlow.Block[] createInitializerCFG(String className) {
+        try {
+
+            CtClass ctClass = pool.get(className);
+            CtConstructor ctConstructor = ctClass.getClassInitializer();
+
+            if (!classesCFG.containsKey(className)) {
+                classesCFG.put(className, new ClassCFG());
+            }
+
+
+            ClassCFG classCFG = classesCFG.get(className);
+
+
+            classCFG.addMethodCFG(createMethodCFG(ctConstructor), "<clinit>", "()V");
+
+            return classCFG.getMethodCFG("<clinit>", "()V");
+
+
+        } catch (NotFoundException | BadBytecode e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+
+    private ControlFlow.Block[] createMethodCFG(CtBehavior method) throws BadBytecode {
 
         MethodInfo methodInfo = method.getMethodInfo();
         ControlFlow controlFlow = new ControlFlow(method.getDeclaringClass(), methodInfo);
-
         return controlFlow.basicBlocks();
-
     }
 
 }

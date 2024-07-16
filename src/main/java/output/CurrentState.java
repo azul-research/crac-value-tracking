@@ -7,11 +7,21 @@ import java.util.*;
 
 public class CurrentState {
 
+    private Set<String> loadedClasses;
+    private Set<String> initialisedClasses;
+    private Map<String, Map<String, Entity>> staticFields;
 
     private final Entity[] variablesArray;
     private Entity returnState;
     private ArrayDeque<Entity> stack;
 
+    public Set<String> getLoadedClasses() {
+        return loadedClasses;
+    }
+
+    public Set<String> getInitialisedClasses() {
+        return initialisedClasses;
+    }
 
     public ArrayDeque<Entity> getStack() {
         return stack;
@@ -33,19 +43,23 @@ public class CurrentState {
     public void updateReturnState(Entity entity) {
         this.returnState = entity;
     }
-    public CurrentState(Entity[] variables, ArrayDeque<Entity> stack) {
+    public CurrentState(Entity[] variables, ArrayDeque<Entity> stack, Set<String> loadedClasses, Set<String> initialisedClasses) {
         this.variablesArray = variables;
         returnState = new Entity(Entity.Type.UNDEFINED);
         this.stack = stack;
+        this.loadedClasses = loadedClasses;
+        this.initialisedClasses = initialisedClasses;
     }
 
     public CurrentState(CurrentState state) {
         this.variablesArray = state.variablesArray.clone();
         this.returnState = state.returnState;
         this.stack = state.stack;
+        this.loadedClasses = state.loadedClasses;
+        this.initialisedClasses = state.initialisedClasses;
     }
 
-    public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives) {
+    public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives, Set<String> loadedClasses, Set<String> initialisedClasses) {
         Entity[] vars = new Entity[numberOfVars];
         for (int i = 0; i < numberOfVars; i++) {
             if (derivatives.containsKey(i)) {
@@ -54,7 +68,7 @@ public class CurrentState {
                 vars[i] = new Entity(Entity.Type.UNDEFINED);
             }
         }
-        return new CurrentState(vars, new ArrayDeque<>());
+        return new CurrentState(vars, new ArrayDeque<>(), loadedClasses, initialisedClasses);
     }
 
 
