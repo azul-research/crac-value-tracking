@@ -2,6 +2,7 @@ package analysis;
 
 import entitites.*;
 import entitites.derivatives.OperationDerivative;
+import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.NotFoundException;
@@ -34,15 +35,15 @@ public class MethodAnalyser {
     Entity thisObj;
 
     Analyser mainAnalyser;
-    CtMethod method;
+    CtBehavior method;
 
     Map<Integer, String> startingDerivatives;
     Set<String> startingLoadedClasses;
-    Set<String> startingInitializedClasses;
+    Map<String, Map<String, Entity>> startingInitializedClasses;
 
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
-    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtMethod method, List<Integer> derivativeVars, Analyser mainAnalyser, Entity thisObject, Set<String> loadedClasses, Set<String> initialisedClasses) {
+    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, List<Integer> derivativeVars, Analyser mainAnalyser, Entity thisObject, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
 
         this.thisObj = thisObject;
         this.mainAnalyser = mainAnalyser;
@@ -83,7 +84,7 @@ public class MethodAnalyser {
 
     }
 
-    private void setFileName(CtMethod method) {
+    private void setFileName(CtBehavior method) {
         var sourceFileAttribute = (SourceFileAttribute) method.getDeclaringClass().getClassFile().getAttribute(SourceFileAttribute.tag);
         this.fileName = sourceFileAttribute.getFileName();
     }
@@ -95,7 +96,7 @@ public class MethodAnalyser {
         }
     }
 
-    private void setCurrentBlocksStates(int numOfVars, Map<Integer, String> derivativeVars, Set<String> loadedClasses, Set<String> initialisedClasses) {
+    private void setCurrentBlocksStates(int numOfVars, Map<Integer, String> derivativeVars, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
         currentBlocksStates = new HashMap<>();
         for (var index : methodCFG.keySet()) {
             currentBlocksStates.put(index, CurrentState.getEmptyState(numOfVars, derivativeVars, loadedClasses, initialisedClasses));

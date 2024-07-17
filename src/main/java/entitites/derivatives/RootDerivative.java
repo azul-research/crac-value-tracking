@@ -4,6 +4,7 @@ import java.util.Objects;
 
 public class RootDerivative extends Derivative {
     String name;
+    String methodName;
     public RootDerivative(String name) {
         super();
         this.name = name;

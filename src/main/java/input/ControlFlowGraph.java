@@ -15,8 +15,28 @@ public class ControlFlowGraph {
         return pool;
     }
 
+
+    public CtClass getClass(String className) {
+        try {
+            return pool.get(className);
+
+        } catch (NotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public boolean containsMethod(String className, String methodName, String methodDesc) {
+        return classesCFG.containsKey(className) && classesCFG.get(className).containsMethod(methodName, methodDesc);
+
+    }
+
     public ControlFlow.Block[] getMethodCFG(String className, String methodName, String methodDesc) {
-        return classesCFG.get(className).getMethodCFG(methodName, methodDesc);
+        if (containsMethod(className, methodName, methodDesc)) {
+            return classesCFG.get(className).getMethodCFG(methodName, methodDesc);
+        }
+
+        return createMethodCFG(className, methodName, methodDesc);
     }
 
     public ControlFlowGraph(String filePath) {
@@ -33,7 +53,7 @@ public class ControlFlowGraph {
         }
     }
 
-    public ControlFlow.Block[] createMethodCFG(String className, String methodName, String desc) {
+    private ControlFlow.Block[] createMethodCFG(String className, String methodName, String desc) {
         try {
             CtClass ctClass = pool.get(className);
             CtMethod method = ctClass.getMethod(methodName, desc);
@@ -65,30 +85,35 @@ public class ControlFlowGraph {
 
     }
 
-
     public ControlFlow.Block[] createInitializerCFG(String className) {
         try {
 
             CtClass ctClass = pool.get(className);
             CtConstructor ctConstructor = ctClass.getClassInitializer();
+            if (ctConstructor == null) {
+                return new ControlFlow.Block[0];
+            }
 
             if (!classesCFG.containsKey(className)) {
                 classesCFG.put(className, new ClassCFG());
             }
 
-
-            ClassCFG classCFG = classesCFG.get(className);
-
-
-            classCFG.addMethodCFG(createMethodCFG(ctConstructor), "<clinit>", "()V");
-
-            return classCFG.getMethodCFG("<clinit>", "()V");
+            return createMethodCFG(ctConstructor);
 
 
         } catch (NotFoundException | BadBytecode e) {
             throw new RuntimeException(e);
         }
 
+    }
+
+
+    public CtConstructor getInitializer(String className) {
+        try {
+            return pool.get(className).getClassInitializer();
+        } catch (NotFoundException e) {
+            return null;
+        }
     }
 
 

@@ -7,8 +7,8 @@ import java.util.*;
 
 public class CurrentState {
 
-    private Set<String> loadedClasses;
-    private Set<String> initialisedClasses;
+    private final Set<String> loadedClasses;
+    private final Map<String, Map<String, Entity>> initialisedClasses;
     private Map<String, Map<String, Entity>> staticFields;
 
     private final Entity[] variablesArray;
@@ -19,7 +19,7 @@ public class CurrentState {
         return loadedClasses;
     }
 
-    public Set<String> getInitialisedClasses() {
+    public Map<String, Map<String, Entity>> getInitialisedClasses() {
         return initialisedClasses;
     }
 
@@ -43,7 +43,7 @@ public class CurrentState {
     public void updateReturnState(Entity entity) {
         this.returnState = entity;
     }
-    public CurrentState(Entity[] variables, ArrayDeque<Entity> stack, Set<String> loadedClasses, Set<String> initialisedClasses) {
+    public CurrentState(Entity[] variables, ArrayDeque<Entity> stack, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
         this.variablesArray = variables;
         returnState = new Entity(Entity.Type.UNDEFINED);
         this.stack = stack;
@@ -59,7 +59,7 @@ public class CurrentState {
         this.initialisedClasses = state.initialisedClasses;
     }
 
-    public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives, Set<String> loadedClasses, Set<String> initialisedClasses) {
+    public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
         Entity[] vars = new Entity[numberOfVars];
         for (int i = 0; i < numberOfVars; i++) {
             if (derivatives.containsKey(i)) {
