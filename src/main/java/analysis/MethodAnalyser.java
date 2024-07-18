@@ -4,7 +4,6 @@ import entitites.*;
 import entitites.derivatives.OperationDerivative;
 import javassist.CtBehavior;
 import javassist.CtClass;
-import javassist.CtMethod;
 import javassist.NotFoundException;
 import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
@@ -126,9 +125,21 @@ public class MethodAnalyser {
             }
         } while (!previousState.equals(currentBlocksStates.get(endBlock)));
 
+        var finalState = currentBlocksStates.get(endBlock);
+
         logger.info("Variables at the end of the method:");
         for (int i = 0; i < numOfVars; i++) {
-            logger.info("{} - {}", getVarName(i), currentBlocksStates.get(endBlock).getVarValue(i).info(0));
+            logger.info("{} - {}", getVarName(i), finalState.getVarValue(i).info(0));
+        }
+
+
+        logger.info("Static fields at the end of the method:");
+        for (var cl :  finalState.getInitialisedClasses().entrySet()) {
+            logger.info("Fields of class {}", cl.getKey());
+            for (var field : cl.getValue().entrySet()) {
+                logger.info("{} - {}", field.getKey(), field.getValue().info(0));
+
+            }
         }
 
     }
@@ -212,17 +223,21 @@ public class MethodAnalyser {
             } else if (matchGetField(name)) {
                 var value = stack.pop();
                 if (value.isDerivativeSet()) {
-                    stack.push(createDerivativeSuccessor(value, getLineNumber(index)));
+                    stack.push(createEntitySuccessor(value, getLineNumber(index)));
                 } else {
                     stack.push(createNonDerivative());
                 }
 
             } else if (matchGetStatic(name)) {
-                // TODO
-                // symbolic reference
-                stack.push(createNonDerivative());
+                int indexInConstPool = parseNextBytes(iterator, index, 2);
+                Entity staticField = getStaticField(indexInConstPool, state);
+                stack.push(staticField);
 
-            } else if (matchGetArrayLength(name)) {
+            } else if (matchPutStatic(name)) {
+                int indexInConstPool = parseNextBytes(iterator, index, 2);
+                putStaticField(indexInConstPool, stack.pop(), state, getLineNumber(index));
+            }
+            else if (matchGetArrayLength(name)) {
                 stack.push(createNonDerivative());
             } else if (!matchIf(name) && !matchGoto(name)) {
                 logger.warn("UNKNOWN OPCODE: {}", name);
@@ -233,6 +248,8 @@ public class MethodAnalyser {
         }
     }
 
+
+
     private Entity createdUndefined() {
         return new Entity(Entity.Type.UNDEFINED);
     }
@@ -240,7 +257,7 @@ public class MethodAnalyser {
     private void processIncrementLocal(int index, CurrentState state, CodeIterator iterator) {
         var varIndex = parseNextBytes(iterator, index, 1);
         if (state.isDerivative(varIndex)) {
-            state.updateVariable(varIndex, createDerivativeSuccessor(state.getVarValue(index), getLineNumber(index)));
+            state.updateVariable(varIndex, createEntitySuccessor(state.getVarValue(index), getLineNumber(index)));
         } else {
             state.updateVariable(varIndex, createNonDerivative());
         }
@@ -266,7 +283,7 @@ public class MethodAnalyser {
         var count = stack.pop();
         var typeRef = parseNextBytes(iterator, index, 2);
         if (count.isDerivativeSet()) {
-            stack.push(createDerivativeSuccessor(count, getLineNumber(index)));
+            stack.push(createEntitySuccessor(count, getLineNumber(index)));
         } else {
             stack.push(createNonDerivative());
         }
@@ -276,7 +293,7 @@ public class MethodAnalyser {
     void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int varNumber) {
         var valueOnStack = stack.pop();
         if (valueOnStack.isDerivativeSet()) {
-            state.updateVariable(varNumber, createDerivativeSuccessor(valueOnStack, getLineNumber(index)));
+            state.updateVariable(varNumber, createEntitySuccessor(valueOnStack, getLineNumber(index)));
         } else {
             state.updateVariable(varNumber, valueOnStack);
         }
@@ -310,6 +327,43 @@ public class MethodAnalyser {
         return result;
 
     }
+
+
+    private void putStaticField(int indexInConstPool, Entity entity, CurrentState state, int line) {
+        ConstPool constPool = method.getDeclaringClass().getClassFile().getConstPool();
+
+        String className = constPool.getFieldrefClassName(indexInConstPool);
+        String fieldName = constPool.getFieldrefName(indexInConstPool);
+
+        int nameAndTypeIndex = constPool.getFieldrefNameAndType(indexInConstPool);
+        int fieldDescriptorIndex = constPool.getNameAndTypeDescriptor(nameAndTypeIndex);
+
+        String fieldDescriptor = constPool.getUtf8Info(fieldDescriptorIndex);
+        String fieldType = Descriptor.toClassName(fieldDescriptor);
+
+        mainAnalyser.prepareClass(className, state.getLoadedClasses(), state.getInitialisedClasses());
+
+        state.getInitialisedClasses().get(className).put(fieldName, createEntitySuccessor(entity, line));
+    }
+
+    private Entity getStaticField(int indexInConstPool, CurrentState state) {
+        ConstPool constPool = method.getDeclaringClass().getClassFile().getConstPool();
+
+        String className = constPool.getFieldrefClassName(indexInConstPool);
+        String fieldName = constPool.getFieldrefName(indexInConstPool);
+
+        int nameAndTypeIndex = constPool.getFieldrefNameAndType(indexInConstPool);
+        int fieldDescriptorIndex = constPool.getNameAndTypeDescriptor(nameAndTypeIndex);
+
+        String fieldDescriptor = constPool.getUtf8Info(fieldDescriptorIndex);
+        String fieldType = Descriptor.toClassName(fieldDescriptor);
+
+        mainAnalyser.prepareClass(className, state.getLoadedClasses(), state.getInitialisedClasses());
+        return state.getInitialisedClasses().get(className).get(fieldName);
+
+
+    }
+
 
     private void analyseAnotherMethod(int index, ArrayDeque<Entity> stack, CurrentState state) {
 
@@ -374,7 +428,10 @@ public class MethodAnalyser {
         return new Entity(Entity.Type.NON_DERIVATIVE);
     }
 
-    private Entity createDerivativeSuccessor(Entity oldValue, int line) {
+    private Entity createEntitySuccessor(Entity oldValue, int line) {
+        if (!oldValue.isDerivativeSet()) {
+            return oldValue;
+        }
         Entity newValue = new Entity(Entity.Type.DERIVATIVE_SET);
 
         for (var pred : oldValue.getDerivativeSet()) {

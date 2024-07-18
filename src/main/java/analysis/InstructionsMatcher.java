@@ -99,6 +99,10 @@ public class InstructionsMatcher {
         return opcode.equals("getstatic");
     }
 
+    public static boolean matchPutStatic(String opcode) {
+        return opcode.equals("putstatic");
+    }
+
     public static boolean matchGetArrayLength(String opcode) {
         return opcode.equals("arraylength");
     }

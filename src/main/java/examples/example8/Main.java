@@ -1,14 +1,22 @@
 package examples.example8;
 
-import static examples.example8.Function.f;
 
 public class Main {
 
+    static String b = "";
+
     public static void main(String[] args) {
+
+
 
         String s = args[0];
 
-        int a = f(s);
+        String t = args[1];
+
+        String r = b;
+
+        b = s;
+
     }
 
 }

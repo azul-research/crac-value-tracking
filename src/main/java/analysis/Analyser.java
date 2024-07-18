@@ -2,10 +2,7 @@ package analysis;
 
 import entitites.Entity;
 import input.ControlFlowGraph;
-import javassist.CtClass;
-import javassist.CtField;
-import javassist.Modifier;
-import javassist.NotFoundException;
+import javassist.*;
 import javassist.bytecode.analysis.ControlFlow;
 import output.CurrentState;
 
@@ -92,8 +89,8 @@ public class Analyser {
 
     private void initialiseClass(String className, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
         initialisedClasses.put(className, new HashMap<>());
-        ControlFlow.Block[] initializerCFG = controlFlowGraph.createInitializerCFG(className);
 
+        ControlFlow.Block[] initializerCFG = controlFlowGraph.createInitializerCFG(className);
         var initializer = controlFlowGraph.getInitializer(className);
         CtClass curClass = controlFlowGraph.getClass(className);
 
@@ -102,9 +99,10 @@ public class Analyser {
                 .filter(field -> Modifier.isStatic(field.getModifiers()))
                 .toArray(CtField[]::new);
 
+
         // default values to static fields
         for (var field : staticFields) {
-            initialisedClasses.get(className).put(field.toString(), new Entity(Entity.Type.NON_DERIVATIVE));
+            initialisedClasses.get(className).put(field.getName(), new Entity(Entity.Type.NON_DERIVATIVE));
         }
 
         // initialise predecessors
@@ -114,22 +112,28 @@ public class Analyser {
         }
 
 
+        executeInitializer(initializer, initializerCFG, loadedClasses, initialisedClasses);
+
+
+
+    }
+
+
+    private void executeInitializer(CtConstructor initializer, ControlFlow.Block[] initializerCFG, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
+
         if (initializer == null) {
             return;
         }
 
-        // execute method <clinit>
         MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, List.of(), this, new Entity(Entity.Type.UNDEFINED), loadedClasses, initialisedClasses);
         analyser.analyse();
         CurrentState result = analyser.getAnalysisResult();
 
-        // save result
         loadedClasses.addAll(result.getLoadedClasses());
         for (var cl : result.getInitialisedClasses().entrySet()) {
             if (!initialisedClasses.containsKey(cl.getKey())) {
                 initialisedClasses.put(cl.getKey(), cl.getValue());
             }
         }
-
     }
 }

@@ -9,7 +9,6 @@ public class CurrentState {
 
     private final Set<String> loadedClasses;
     private final Map<String, Map<String, Entity>> initialisedClasses;
-    private Map<String, Map<String, Entity>> staticFields;
 
     private final Entity[] variablesArray;
     private Entity returnState;
