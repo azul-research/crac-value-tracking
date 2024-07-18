@@ -1,9 +1,6 @@
-package examples.example1;
+package examples.nestedif;
 
 public class Main {
-
-    static public int a = 12;
-
     public static void main(String[] args) {
         String b = "";
         String c = "";

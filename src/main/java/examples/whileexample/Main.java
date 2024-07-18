@@ -1,4 +1,4 @@
-package examples.example2;
+package examples.whileexample;
 
 public class Main {
     public static void main(String[] args) {

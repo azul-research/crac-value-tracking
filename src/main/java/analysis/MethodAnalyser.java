@@ -16,10 +16,7 @@ import java.util.*;
 import static analysis.InstructionsMatcher.*;
 
 public class MethodAnalyser {
-
     private static final Logger logger = LogManager.getLogger(MethodAnalyser.class);
-
-
     Map<Integer, ControlFlow.Block> methodCFG;
 
     ControlFlow.Block[] blocks;
@@ -132,7 +129,6 @@ public class MethodAnalyser {
             logger.info("{} - {}", getVarName(i), finalState.getVarValue(i).info(0));
         }
 
-
         logger.info("Static fields at the end of the method:");
         for (var cl :  finalState.getInitialisedClasses().entrySet()) {
             logger.info("Fields of class {}", cl.getKey());
@@ -141,11 +137,6 @@ public class MethodAnalyser {
 
             }
         }
-
-
-
-
-
     }
 
     void analyseBasicBlock(int blockIndex) {
@@ -197,9 +188,7 @@ public class MethodAnalyser {
                 stack.push(valueOnStack);
 
             } else if (matchBinOperation(name)) {
-                var first = stack.pop();
-                var second = stack.pop();
-                stack.push(createMergedEntity(first, second, getLineNumber(index)));
+                processBinOperation(index, stack);
 
             } else if (matchCreateArray(name)) {
                 processCreateArray(index, stack, iterator);
@@ -226,20 +215,16 @@ public class MethodAnalyser {
 
             } else if (matchGetField(name)) {
                 var value = stack.pop();
-                if (value.isDerivativeSet()) {
-                    stack.push(createEntitySuccessor(value, getLineNumber(index)));
-                } else {
-                    stack.push(createNonDerivative());
-                }
+                stack.push(createEntitySuccessor(value, getLineNumber(index)));
 
             } else if (matchGetStatic(name)) {
                 int indexInConstPool = parseNextBytes(iterator, index, 2);
-                Entity staticField = getStaticField(indexInConstPool, state);
+                Entity staticField = processGetStaticField(indexInConstPool, state);
                 stack.push(staticField);
 
             } else if (matchPutStatic(name)) {
                 int indexInConstPool = parseNextBytes(iterator, index, 2);
-                putStaticField(indexInConstPool, stack.pop(), state, getLineNumber(index));
+                processPutStaticField(indexInConstPool, stack.pop(), state, getLineNumber(index));
             }
             else if (matchGetArrayLength(name)) {
                 stack.push(createNonDerivative());
@@ -253,6 +238,11 @@ public class MethodAnalyser {
     }
 
 
+    private void processBinOperation(int index, ArrayDeque<Entity> stack) {
+        var first = stack.pop();
+        var second = stack.pop();
+        stack.push(createMergedEntity(first, second, getLineNumber(index)));
+    }
 
     private Entity createdUndefined() {
         return new Entity(Entity.Type.UNDEFINED);
@@ -332,8 +322,7 @@ public class MethodAnalyser {
 
     }
 
-
-    private void putStaticField(int indexInConstPool, Entity entity, CurrentState state, int line) {
+    private StaticFieldInfo getFieldNameAndClassName(int indexInConstPool) {
         ConstPool constPool = method.getDeclaringClass().getClassFile().getConstPool();
 
         String className = constPool.getFieldrefClassName(indexInConstPool);
@@ -345,26 +334,26 @@ public class MethodAnalyser {
         String fieldDescriptor = constPool.getUtf8Info(fieldDescriptorIndex);
         String fieldType = Descriptor.toClassName(fieldDescriptor);
 
-        mainAnalyser.prepareClass(className, state.getLoadedClasses(), state.getInitialisedClasses());
-
-        state.getInitialisedClasses().get(className).put(fieldName, createEntitySuccessor(entity, line));
+        return new StaticFieldInfo(className, fieldName);
     }
 
-    private Entity getStaticField(int indexInConstPool, CurrentState state) {
-        ConstPool constPool = method.getDeclaringClass().getClassFile().getConstPool();
 
-        String className = constPool.getFieldrefClassName(indexInConstPool);
-        String fieldName = constPool.getFieldrefName(indexInConstPool);
+    record StaticFieldInfo(String className, String name) {}
 
-        int nameAndTypeIndex = constPool.getFieldrefNameAndType(indexInConstPool);
-        int fieldDescriptorIndex = constPool.getNameAndTypeDescriptor(nameAndTypeIndex);
+    private void processPutStaticField(int indexInConstPool, Entity entity, CurrentState state, int line) {
+        StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
 
-        String fieldDescriptor = constPool.getUtf8Info(fieldDescriptorIndex);
-        String fieldType = Descriptor.toClassName(fieldDescriptor);
+        mainAnalyser.prepareClass(fieldInfo.className, state.getLoadedClasses(), state.getInitialisedClasses());
 
-        mainAnalyser.prepareClass(className, state.getLoadedClasses(), state.getInitialisedClasses());
-        return state.getInitialisedClasses().get(className).get(fieldName);
+        state.getInitialisedClasses().get(fieldInfo.className).put(fieldInfo.name, createEntitySuccessor(entity, line));
+    }
 
+    private Entity processGetStaticField(int indexInConstPool, CurrentState state) {
+        StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
+
+        mainAnalyser.prepareClass(fieldInfo.className, state.getLoadedClasses(), state.getInitialisedClasses());
+
+        return state.getInitialisedClasses().get(fieldInfo.className).get(fieldInfo.name);
 
     }
 
@@ -379,10 +368,6 @@ public class MethodAnalyser {
         String methodDescriptor = constPool.getMethodrefType(index);
 
         logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
-//
-//        if (!className.startsWith("java.")) {
-//            // resolution
-//        }
 
         try {
             CtClass[] parameterTypes = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool());
@@ -412,21 +397,6 @@ public class MethodAnalyser {
         }
 
     }
-//
-//    private Entity analyseStaticMethod(int index) {
-//        var classFile = method.getDeclaringClass().getClassFile();
-//        var constPool = classFile.getConstPool();
-//
-//        int methodRefIndex = constPool.getMethodrefClass(index);
-//        String className = constPool.getClassInfo(methodRefIndex);
-//        String methodName = constPool.getMethodrefName(index);
-//        String methodDescriptor = constPool.getMethodrefType(index);
-//
-//        logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
-//
-//        MethodAnalyser analyser = mainAnalyser.analyseMethod(className, methodName, List.of(0));
-//        return analyser.getAnalysisResult().getReturnState();
-//    }
 
     private Entity createNonDerivative() {
         return new Entity(Entity.Type.NON_DERIVATIVE);

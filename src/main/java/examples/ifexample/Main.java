@@ -1,4 +1,4 @@
-package examples.example5;
+package examples.ifexample;
 
 public class Main {
 
