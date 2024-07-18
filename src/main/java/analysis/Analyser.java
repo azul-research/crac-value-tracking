@@ -8,8 +8,6 @@ import output.CurrentState;
 
 import java.util.*;
 
-import static input.BytecodeExtractor.getSourceFile;
-
 public class Analyser {
 
 
@@ -29,11 +27,10 @@ public class Analyser {
         this.programJarPath = dirPath;
         this.mainClassName = mainClassName;
         controlFlowGraph = new ControlFlowGraph(dirPath);
-//        controlFlowGraph.addClassPath(getSourceFile("java"));
     }
 
 
-    public MethodAnalyser analyseMethod(String className, String methodName, List<Integer> derivativeArgs, String desc, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
+    public CurrentState analyseMethod(String className, String methodName, List<Integer> derivativeArgs, String desc, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
         prepareClass(className, loadedClasses, initialisedClasses);
 
         var methodCFG = controlFlowGraph.getMethodCFG(className, methodName, desc);
@@ -42,7 +39,7 @@ public class Analyser {
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, new Entity(Entity.Type.UNDEFINED), loadedClasses, initialisedClasses);
         analyser.analyse();
 
-        return analyser;
+        return analyser.getAnalysisResult();
     }
 
 
@@ -65,7 +62,7 @@ public class Analyser {
     }
 
 
-    public MethodAnalyser analyseProgram() {
+    public CurrentState analyseProgram() {
         var loadedClasses = new HashSet<String>();
         var initialisedClasses = new HashMap<String, Map<String, Entity>>();
 
@@ -94,13 +91,8 @@ public class Analyser {
         var initializer = controlFlowGraph.getInitializer(className);
         CtClass curClass = controlFlowGraph.getClass(className);
 
-        var allFields = curClass.getDeclaredFields();
-        CtField[] staticFields = Arrays.stream(allFields)
-                .filter(field -> Modifier.isStatic(field.getModifiers()))
-                .toArray(CtField[]::new);
-
-
         // default values to static fields
+        CtField[] staticFields = getStaticFields(curClass);
         for (var field : staticFields) {
             initialisedClasses.get(className).put(field.getName(), new Entity(Entity.Type.NON_DERIVATIVE));
         }
@@ -110,17 +102,20 @@ public class Analyser {
         if (declaringClass != null) {
             prepareClass(declaringClass.getName(), loadedClasses, initialisedClasses);
         }
-
-
+        // execute initializer
         executeInitializer(initializer, initializerCFG, loadedClasses, initialisedClasses);
 
+    }
 
-
+    private CtField[] getStaticFields(CtClass cl) {
+        var allFields = cl.getDeclaredFields();
+        return Arrays.stream(allFields)
+                .filter(field -> Modifier.isStatic(field.getModifiers()))
+                .toArray(CtField[]::new);
     }
 
 
     private void executeInitializer(CtConstructor initializer, ControlFlow.Block[] initializerCFG, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
-
         if (initializer == null) {
             return;
         }
@@ -130,10 +125,6 @@ public class Analyser {
         CurrentState result = analyser.getAnalysisResult();
 
         loadedClasses.addAll(result.getLoadedClasses());
-        for (var cl : result.getInitialisedClasses().entrySet()) {
-            if (!initialisedClasses.containsKey(cl.getKey())) {
-                initialisedClasses.put(cl.getKey(), cl.getValue());
-            }
-        }
+        initialisedClasses.putAll(result.getInitialisedClasses());
     }
 }

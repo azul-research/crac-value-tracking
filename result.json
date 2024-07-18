@@ -1,0 +1,54 @@
+{
+  "loaded classes": [
+    "examples.example1.Main"
+  ],
+  "initialised classes": [
+    "examples.example1.Main"
+  ],
+  "static fields": {
+    "examples.example1.Main": {
+      "a": {
+        "type": "NON_DERIVATIVE"
+      }
+    }
+  },
+  "variables array": [
+    {
+      "type": "DERIVATIVE_SET",
+      "derivative from any of this": [
+        {
+          "root derivative": "args"
+        }
+      ]
+    },
+    {
+      "type": "DERIVATIVE_SET",
+      "derivative from any of this": [
+        {
+          "predecessors": [
+            {
+              "root derivative": "args"
+            }
+          ],
+          "line": 14
+        }
+      ]
+    },
+    {
+      "type": "DERIVATIVE_SET",
+      "derivative from any of this": [
+        {
+          "predecessors": [
+            {
+              "root derivative": "args"
+            }
+          ],
+          "line": 17
+        }
+      ]
+    },
+    {
+      "type": "NON_DERIVATIVE"
+    }
+  ]
+}

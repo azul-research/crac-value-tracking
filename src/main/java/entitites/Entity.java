@@ -80,6 +80,11 @@ public class Entity {
         type = DERIVATIVE_SET;
     }
 
+
+    public Type getType() {
+        return type;
+    }
+
     public String info(int tabNumber) {
         if (isUndefined()) {
             return "\t".repeat(tabNumber) + "undefined";

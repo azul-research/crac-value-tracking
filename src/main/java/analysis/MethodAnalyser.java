@@ -142,6 +142,10 @@ public class MethodAnalyser {
             }
         }
 
+
+
+
+
     }
 
     void analyseBasicBlock(int blockIndex) {
@@ -395,9 +399,9 @@ public class MethodAnalyser {
                 }
             }
 
-            MethodAnalyser analyser = mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, state.getLoadedClasses(), state.getInitialisedClasses());
+            CurrentState resultState = mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, state.getLoadedClasses(), state.getInitialisedClasses());
 
-            var result = analyser.getAnalysisResult().getReturnState();
+            var result = resultState.getReturnState();
             if (!result.isUndefined()) {
                 stack.push(result);
             }

@@ -3,13 +3,16 @@ package entitites.derivatives;
 import java.util.Objects;
 
 public class RootDerivative extends Derivative {
-    String name;
-    String methodName;
+    private final String name;
+    private String methodName;
     public RootDerivative(String name) {
         super();
         this.name = name;
     }
 
+    public String getName() {
+        return name;
+    }
 
     @Override
     public String info(int tabNumber) {

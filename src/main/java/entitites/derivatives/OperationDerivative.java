@@ -42,5 +42,13 @@ public class OperationDerivative extends Derivative {
     public int hashCode() {
         return Objects.hash(Arrays.hashCode(predecessors), line);
     }
+
+    public Derivative[] getPredecessors() {
+        return predecessors;
+    }
+
+    public int getLine() {
+        return line;
+    }
 }
 
