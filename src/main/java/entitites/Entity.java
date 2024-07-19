@@ -19,6 +19,9 @@ public class Entity {
     }
 
 
+    public static Entity createNonDerivative() {
+        return new Entity(Entity.Type.NON_DERIVATIVE);
+    }
 
     public enum Type {
         UNDEFINED,

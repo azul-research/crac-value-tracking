@@ -14,6 +14,7 @@ import output.CurrentState;
 import java.util.*;
 
 import static analysis.InstructionsMatcher.*;
+import static entitites.Entity.createNonDerivative;
 
 public class MethodAnalyser {
     private static final Logger logger = LogManager.getLogger(MethodAnalyser.class);
@@ -24,6 +25,8 @@ public class MethodAnalyser {
     Map<Integer, CurrentState> currentBlocksStates;
     //    CtMethod method;
     CodeAttribute codeAttribute;
+
+    InstructionsProcessor processor;
     int startBlock;
     int endBlock;
     int numOfVars;
@@ -61,6 +64,8 @@ public class MethodAnalyser {
         this.startingInitializedClasses = initialisedClasses;
         setCurrentBlocksStates(numOfVars, this.startingDerivatives, loadedClasses, initialisedClasses);
 
+        this.processor = new InstructionsProcessor(this, method);
+
         logger.debug("Number of local variables: {}", numOfVars);
 
     }
@@ -78,6 +83,11 @@ public class MethodAnalyser {
         var attribute = (LineNumberAttribute) codeAttribute.getAttribute(LineNumberAttribute.tag);
         return attribute.toLineNumber(i);
 
+    }
+
+
+    public Analyser getMainAnalyser() {
+        return mainAnalyser;
     }
 
     private void setFileName(CtBehavior method) {
@@ -123,14 +133,18 @@ public class MethodAnalyser {
         } while (!previousState.equals(currentBlocksStates.get(endBlock)));
 
         var finalState = currentBlocksStates.get(endBlock);
+        logFinalState(finalState);
 
+    }
+
+    private void logFinalState(CurrentState finalState) {
         logger.info("Variables at the end of the method:");
         for (int i = 0; i < numOfVars; i++) {
             logger.info("{} - {}", getVarName(i), finalState.getVarValue(i).info(0));
         }
 
         logger.info("Static fields at the end of the method:");
-        for (var cl :  finalState.getInitialisedClasses().entrySet()) {
+        for (var cl : finalState.getInitialisedClasses().entrySet()) {
             logger.info("Fields of class {}", cl.getKey());
             for (var field : cl.getValue().entrySet()) {
                 logger.info("{} - {}", field.getKey(), field.getValue().info(0));
@@ -154,9 +168,7 @@ public class MethodAnalyser {
     }
 
     void analyseCode(CurrentState state, int blockIndex) {
-
         int blockEnd = methodCFG.get(blockIndex).length() + blockIndex;
-//        var code = codeAttribute.getCode();
         var iterator = codeAttribute.iterator();
         int index = blockIndex;
 
@@ -172,11 +184,11 @@ public class MethodAnalyser {
 
             } else if (matchStoreData(name)) {
                 var varNumber = getNumberInOpCode(name);
-                processDataStore(index, stack, state, varNumber);
+                processor.processDataStore(index, stack, state, varNumber);
 
             } else if (matchStoreToVariable(name)) {
                 int varNumber = parseNextBytes(iterator, index, 1);
-                processDataStore(index, stack, state, varNumber);
+                processor.processDataStore(index, stack, state, varNumber);
 
             } else if (matchLoadVariable(name)) {
                 var varNumber = getNumberInOpCode(name);
@@ -188,24 +200,24 @@ public class MethodAnalyser {
                 stack.push(valueOnStack);
 
             } else if (matchBinOperation(name)) {
-                processBinOperation(index, stack);
+                processor.processBinOperation(index, stack);
 
             } else if (matchCreateArray(name)) {
-                processCreateArray(index, stack, iterator);
+                processor.processCreateArray(index, stack, iterator);
 
             } else if (matchStoreToArray(name)) {
-                processStoreToArray(index, stack);
+                processor.processStoreToArray(index, stack);
 
             } else if (matchIncrementLocal(name)) {
-                processIncrementLocal(index, state, iterator);
+                processor.processIncrementLocal(index, state, iterator);
 
             } else if (matchInvokeVirtual(name) | matchInvokeSpecial(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
-                analyseAnotherMethod(methodIndex, stack, state);
+                stack = analyseAnotherMethod(methodIndex, stack, state);
 
-            } else if (matchInvokeStatic(name)) {
-                var methodIndex = parseNextBytes(iterator, index, 2);
-                analyseAnotherMethod(methodIndex, stack, state);
+//            } else if (matchInvokeStatic(name)) {
+//                var methodIndex = parseNextBytes(iterator, index, 2);
+//                analyseAnotherMethod(methodIndex, stack, state);
 
             } else if (matchReturnVoid(name)) {
                 state.updateReturnState(createdUndefined());
@@ -214,20 +226,36 @@ public class MethodAnalyser {
                 state.updateReturnState(stack.pop());
 
             } else if (matchGetField(name)) {
+                var objectRef = stack.pop();
+                stack.push(createEntitySuccessor(objectRef, getLineNumber(index)));
+            } else if (matchPutField(name)) {
                 var value = stack.pop();
-                stack.push(createEntitySuccessor(value, getLineNumber(index)));
+                var objectRef = stack.pop();
+                if (value.isDerivativeSet()) {
+                    if (!objectRef.isDerivativeSet()) {
+                        objectRef.setToDerivative();
+                        objectRef.setDerivativeSet(createEntitySuccessor(value, getLineNumber(index)).getDerivativeSet());
+                    } else {
+                        objectRef.setDerivativeSet(createMergedDerivativeSet(value, objectRef, getLineNumber(index)).getDerivativeSet());
+                    }
+
+                }
+
 
             } else if (matchGetStatic(name)) {
                 int indexInConstPool = parseNextBytes(iterator, index, 2);
-                Entity staticField = processGetStaticField(indexInConstPool, state);
+                Entity staticField = processor.processGetStatic(indexInConstPool, state);
                 stack.push(staticField);
 
             } else if (matchPutStatic(name)) {
                 int indexInConstPool = parseNextBytes(iterator, index, 2);
-                processPutStaticField(indexInConstPool, stack.pop(), state, getLineNumber(index));
-            }
-            else if (matchGetArrayLength(name)) {
+                processor.processPutStatic(indexInConstPool, stack.pop(), state, getLineNumber(index));
+            } else if (matchGetArrayLength(name)) {
                 stack.push(createNonDerivative());
+            } else if (matchNew(name)) {
+                stack.push(createNonDerivative());
+            } else if (matchDuplicateValue(name)) {
+                stack.push(stack.getFirst());
             } else if (!matchIf(name) && !matchGoto(name)) {
                 logger.warn("UNKNOWN OPCODE: {}", name);
             }
@@ -238,75 +266,24 @@ public class MethodAnalyser {
     }
 
 
-    private void processBinOperation(int index, ArrayDeque<Entity> stack) {
-        var first = stack.pop();
-        var second = stack.pop();
-        stack.push(createMergedEntity(first, second, getLineNumber(index)));
-    }
-
     private Entity createdUndefined() {
         return new Entity(Entity.Type.UNDEFINED);
     }
 
-    private void processIncrementLocal(int index, CurrentState state, CodeIterator iterator) {
-        var varIndex = parseNextBytes(iterator, index, 1);
-        if (state.isDerivative(varIndex)) {
-            state.updateVariable(varIndex, createEntitySuccessor(state.getVarValue(index), getLineNumber(index)));
-        } else {
-            state.updateVariable(varIndex, createNonDerivative());
-        }
-    }
 
-    private void processStoreToArray(int index, ArrayDeque<Entity> stack) {
-        var value = stack.pop();
-        var ind = stack.pop();
-        var arrayRef = stack.pop();
-
-        if (value.isDerivativeSet()) {
-            if (arrayRef.isNonDerivative()) {
-                arrayRef.setToDerivative();
-                for (var derivative : value.getDerivativeSet()) {
-                    arrayRef.addDerivative(new OperationDerivative(getLineNumber(index), derivative));
-                }
-            }
-        }
-
-    }
-
-    private void processCreateArray(int index, ArrayDeque<Entity> stack, CodeIterator iterator) {
-        var count = stack.pop();
-        var typeRef = parseNextBytes(iterator, index, 2);
-        if (count.isDerivativeSet()) {
-            stack.push(createEntitySuccessor(count, getLineNumber(index)));
-        } else {
-            stack.push(createNonDerivative());
-        }
-    }
-
-
-    void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int varNumber) {
-        var valueOnStack = stack.pop();
-        if (valueOnStack.isDerivativeSet()) {
-            state.updateVariable(varNumber, createEntitySuccessor(valueOnStack, getLineNumber(index)));
-        } else {
-            state.updateVariable(varNumber, valueOnStack);
-        }
-    }
-
-    private Entity createMergedEntity(Entity first, Entity second, int codeLine) {
+    Entity createMergedEntity(Entity first, Entity second, int codeLine) {
         if (first.compareType(second) > 0) {
             return first;
         } else if (first.compareType(second) < 0) {
             return second;
         } else if (first.compareType(second) == 0 && first.isDerivativeSet()) {
-            return createMergedDerivative(first, second, codeLine);
+            return createMergedDerivativeSet(first, second, codeLine);
         } else {
             return first;
         }
     }
 
-
-    private Entity createMergedDerivative(Entity first, Entity second, int codeLine) {
+    private Entity createMergedDerivativeSet(Entity first, Entity second, int codeLine) {
         assert first.isDerivativeSet();
         assert second.isDerivativeSet();
 
@@ -317,51 +294,12 @@ public class MethodAnalyser {
                 result.addDerivative(new OperationDerivative(codeLine, pred1, pred2));
             }
         }
-
         return result;
-
-    }
-
-    private StaticFieldInfo getFieldNameAndClassName(int indexInConstPool) {
-        ConstPool constPool = method.getDeclaringClass().getClassFile().getConstPool();
-
-        String className = constPool.getFieldrefClassName(indexInConstPool);
-        String fieldName = constPool.getFieldrefName(indexInConstPool);
-
-        int nameAndTypeIndex = constPool.getFieldrefNameAndType(indexInConstPool);
-        int fieldDescriptorIndex = constPool.getNameAndTypeDescriptor(nameAndTypeIndex);
-
-        String fieldDescriptor = constPool.getUtf8Info(fieldDescriptorIndex);
-        String fieldType = Descriptor.toClassName(fieldDescriptor);
-
-        return new StaticFieldInfo(className, fieldName);
     }
 
 
-    record StaticFieldInfo(String className, String name) {}
-
-    private void processPutStaticField(int indexInConstPool, Entity entity, CurrentState state, int line) {
-        StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
-
-        mainAnalyser.prepareClass(fieldInfo.className, state.getLoadedClasses(), state.getInitialisedClasses());
-
-        state.getInitialisedClasses().get(fieldInfo.className).put(fieldInfo.name, createEntitySuccessor(entity, line));
-    }
-
-    private Entity processGetStaticField(int indexInConstPool, CurrentState state) {
-        StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
-
-        mainAnalyser.prepareClass(fieldInfo.className, state.getLoadedClasses(), state.getInitialisedClasses());
-
-        return state.getInitialisedClasses().get(fieldInfo.className).get(fieldInfo.name);
-
-    }
-
-
-    private void analyseAnotherMethod(int index, ArrayDeque<Entity> stack, CurrentState state) {
-
+    private ArrayDeque<Entity> analyseAnotherMethod(int index, ArrayDeque<Entity> stack, CurrentState state) {
         var constPool = method.getDeclaringClass().getClassFile().getConstPool();
-
         int methodRefIndex = constPool.getMethodrefClass(index);
         String className = constPool.getClassInfo(methodRefIndex);
         String methodName = constPool.getMethodrefName(index);
@@ -379,17 +317,21 @@ public class MethodAnalyser {
             int numberOfArguments = parameterTypes.length;
             List<Integer> derivativeArgs = new ArrayList<>();
             for (int i = 0; i < numberOfArguments; i++) {
-                if (stack.pop().isDerivativeSet()) {
+                if (stack.getFirst().isDerivativeSet()) {
                     derivativeArgs.add(i);
                 }
             }
-
             CurrentState resultState = mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, state.getLoadedClasses(), state.getInitialisedClasses());
+
+
+            state.updateStack(resultState.getStack());
 
             var result = resultState.getReturnState();
             if (!result.isUndefined()) {
                 stack.push(result);
             }
+
+            return state.getStack();
 
 
         } catch (NotFoundException e) {
@@ -398,11 +340,8 @@ public class MethodAnalyser {
 
     }
 
-    private Entity createNonDerivative() {
-        return new Entity(Entity.Type.NON_DERIVATIVE);
-    }
 
-    private Entity createEntitySuccessor(Entity oldValue, int line) {
+    Entity createEntitySuccessor(Entity oldValue, int line) {
         if (!oldValue.isDerivativeSet()) {
             return oldValue;
         }
@@ -448,7 +387,6 @@ public class MethodAnalyser {
     }
 
     private ArrayDeque<Entity> mergeStacks(List<CurrentState> currentStates) {
-
         int stackSize = currentStates.getFirst().getStack().size();
         Entity[] result = new Entity[stackSize];
 
@@ -487,7 +425,7 @@ public class MethodAnalyser {
     }
 
 
-    private int parseNextBytes(CodeIterator iterator, int index, int bytesNumber) {
+    int parseNextBytes(CodeIterator iterator, int index, int bytesNumber) {
         int result = 1;
         for (int i = 0; i < bytesNumber; i++) {
             int indexbyte = (iterator.byteAt(i + index + 1) & 0xff);
@@ -495,6 +433,7 @@ public class MethodAnalyser {
         }
         return result;
     }
+
 
 
 }

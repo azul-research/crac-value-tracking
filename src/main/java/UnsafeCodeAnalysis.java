@@ -2,8 +2,10 @@ import analysis.Analyser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import entitites.Entity;
+import entitites.derivatives.OperationDerivative;
 import entitites.derivatives.RootDerivative;
 import serializers.EntitySerializer;
+import serializers.OperationDerivativeSerializer;
 import serializers.RootDerivativeSerializer;
 import output.CurrentState;
 import serializers.CurrentStateSerializer;
@@ -44,6 +46,7 @@ public class UnsafeCodeAnalysis {
         ObjectMapper mapper = new ObjectMapper();
         SimpleModule module = new SimpleModule();
         module.addSerializer(RootDerivative.class, new RootDerivativeSerializer());
+        module.addSerializer(OperationDerivative.class, new OperationDerivativeSerializer());
         module.addSerializer(CurrentState.class, new CurrentStateSerializer());
         module.addSerializer(Entity.class, new EntitySerializer());
         mapper.registerModule(module);

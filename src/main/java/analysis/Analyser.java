@@ -34,7 +34,7 @@ public class Analyser {
         prepareClass(className, loadedClasses, initialisedClasses);
 
         var methodCFG = controlFlowGraph.getMethodCFG(className, methodName, desc);
-        var method = controlFlowGraph.getMethod(className, methodName, desc);
+        var method = controlFlowGraph.getBehavior(className, methodName, desc);
 
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, new Entity(Entity.Type.UNDEFINED), loadedClasses, initialisedClasses);
         analyser.analyse();
@@ -73,12 +73,16 @@ public class Analyser {
     private void loadClass(String className, Set<String> loadedClasses) {
         loadedClasses.add(className);
 
+//        CtClass curClass = controlFlowGraph.getClass(className);
+//        loadedClasses.add(getSuperClass(curClass).getName());
+//
+//        for ()
     }
 
 
-    CtClass getClassPredecessor(CtClass ctClass) {
+    CtClass getSuperClass(CtClass ctClass) {
         try {
-            return ctClass.getDeclaringClass();
+            return ctClass.getSuperclass();
         } catch (NotFoundException e) {
             return null;
         }
@@ -98,10 +102,22 @@ public class Analyser {
         }
 
         // initialise predecessors
-        var declaringClass = getClassPredecessor(curClass);
+        var declaringClass = getSuperClass(curClass);
         if (declaringClass != null) {
             prepareClass(declaringClass.getName(), loadedClasses, initialisedClasses);
         }
+
+        // TODO
+        try {
+            for (var interf : curClass.getInterfaces()) {
+                prepareClass(interf.getName(), loadedClasses, initialisedClasses);
+            }
+
+        } catch (NotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+
         // execute initializer
         executeInitializer(initializer, initializerCFG, loadedClasses, initialisedClasses);
 

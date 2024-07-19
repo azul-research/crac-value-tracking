@@ -8,6 +8,9 @@ import java.util.*;
 
 public class ControlFlowGraph {
 
+
+    private static final String CONSTRUCTOR_NAME = "<init>";
+
     private ClassPool pool;
     private final Map<String, ClassCFG> classesCFG = new HashMap<>();
 
@@ -55,35 +58,41 @@ public class ControlFlowGraph {
 
     private ControlFlow.Block[] createMethodCFG(String className, String methodName, String desc) {
         try {
-            CtClass ctClass = pool.get(className);
-            CtMethod method = ctClass.getMethod(methodName, desc);
-
+            CtBehavior behavior = getBehavior(className, methodName, desc);
             if (!classesCFG.containsKey(className)) {
                 classesCFG.put(className, new ClassCFG());
             }
             ClassCFG classCFG = classesCFG.get(className);
 
-
-            classCFG.addMethodCFG(createMethodCFG(method), methodName, desc);
+            classCFG.addMethodCFG(createMethodCFG(behavior), methodName, desc);
 
             return classCFG.getMethodCFG(methodName, desc);
 
-
-        } catch (NotFoundException | BadBytecode e) {
+        } catch (BadBytecode e) {
             throw new RuntimeException(e);
         }
 
     }
 
-    public CtMethod getMethod(String className, String methodName, String desc) {
+    public CtBehavior getBehavior(String className, String behaviorName, String desc) {
         try {
             CtClass ctClass = pool.get(className);
-            return ctClass.getMethod(methodName, desc);
+
+            if (behaviorName.equals(CONSTRUCTOR_NAME)) {
+                return ctClass.getConstructor(desc);
+            }
+
+            return ctClass.getMethod(behaviorName, desc);
+
         } catch (NotFoundException e) {
             throw new RuntimeException(e);
         }
-
     }
+
+//
+//    public CtBehavior getMethod(String className, String methodName, String desc) {
+//        return getBehaivor(className, methodName, desc);
+//    }
 
     public ControlFlow.Block[] createInitializerCFG(String className) {
         try {

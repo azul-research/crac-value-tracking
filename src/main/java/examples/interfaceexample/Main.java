@@ -1,4 +1,4 @@
-package examples.example4;
+package examples.interfaceexample;
 
 public class Main {
     public static void main(String[] args) {

@@ -91,8 +91,13 @@ public class InstructionsMatcher {
     public static boolean matchInvokeSpecial(String opcode) {
         return opcode.equals("invokespecial");
     }
+
     public static boolean matchGetField(String opcode) {
         return opcode.equals("getfield");
+    }
+
+    public static boolean matchPutField(String opcode) {
+        return opcode.equals("putfield");
     }
 
     public static boolean matchGetStatic(String opcode) {
@@ -117,6 +122,14 @@ public class InstructionsMatcher {
 
     public static boolean matchReturnVoid(String opcode) {
         return opcode.equals("return");
+    }
+
+    public static boolean matchNew(String opcode) {
+        return opcode.equals("new");
+    }
+
+    public static boolean matchDuplicateValue(String opcode) {
+        return opcode.equals("dup");
     }
 
 
