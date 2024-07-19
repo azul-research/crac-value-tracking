@@ -15,6 +15,8 @@ first argument - path to .jar file <br>
 second argument - full name of Main class <br>
 third argument - path to Java <br>
 Example of arguments: `src/test/java/testJarFiles/mainifandwhile.jar examples.ifandwhile.Main java`
+
+Result will be saved to file `result.json`
 ## Support
 Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
 
