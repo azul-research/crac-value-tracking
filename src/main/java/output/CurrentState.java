@@ -9,7 +9,7 @@ import java.util.*;
 public class CurrentState {
 
     private final Set<String> loadedClasses;
-    private final Map<String, Map<String, Entity>> initialisedClasses;
+    private Map<String, Map<String, Entity>> initialisedClasses;
 
     private final Entity[] variablesArray;
     private  Optional<Entity> returnState;
@@ -78,6 +78,11 @@ public class CurrentState {
 
     public void updateVariable(Integer number, Entity newValue) {
         variablesArray[number] = newValue;
+    }
+
+
+    public void updateInitialisedClasses(Map<String, Map<String, Entity>> newInitialisedClasses) {
+        this.initialisedClasses = newInitialisedClasses;
     }
 
     public boolean isDerivative(Integer var) {

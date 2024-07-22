@@ -21,7 +21,7 @@ public class InstructionsMatcher {
     }
 
     public static boolean matchConstLoadFromPool(String opcode) {
-        return opcode.equals("ldc");
+        return opcode.startsWith("ldc");
     }
 
     static boolean matchStoreData(String opCode) {
@@ -80,6 +80,15 @@ public class InstructionsMatcher {
         return opcode.equals("invokevirtual");
     }
 
+    public static boolean matchInvokeSpecial(String opcode) {
+        return opcode.equals("invokespecial");
+    }
+
+    public static boolean matchInvokeInterface(String opcode) {
+        return opcode.equals("invokeinterface");
+    }
+
+
     public static boolean matchInvokeDynamic(String opcode) {
         return opcode.equals("invokedynamic");
     }
@@ -88,9 +97,6 @@ public class InstructionsMatcher {
         return opcode.equals("invokestatic");
     }
 
-    public static boolean matchInvokeSpecial(String opcode) {
-        return opcode.equals("invokespecial");
-    }
 
     public static boolean matchGetField(String opcode) {
         return opcode.equals("getfield");

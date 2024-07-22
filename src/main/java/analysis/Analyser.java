@@ -36,6 +36,9 @@ public class Analyser {
         var methodCFG = controlFlowGraph.getMethodCFG(className, methodName, desc);
         var method = controlFlowGraph.getBehavior(className, methodName, desc);
 
+        if (Modifier.isNative(method.getModifiers())) {
+            return CurrentState.getEmptyState(0, Map.of(), loadedClasses, initialisedClasses);
+        }
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, loadedClasses, initialisedClasses);
         analyser.analyse();
 

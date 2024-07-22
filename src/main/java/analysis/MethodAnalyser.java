@@ -3,8 +3,6 @@ package analysis;
 import entitites.*;
 import entitites.derivatives.OperationDerivative;
 import javassist.CtBehavior;
-import javassist.CtClass;
-import javassist.NotFoundException;
 import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
 import org.apache.logging.log4j.LogManager;
@@ -211,7 +209,7 @@ public class MethodAnalyser {
             } else if (matchIncrementLocal(name)) {
                 processor.processIncrementLocal(index, state, iterator);
 
-            } else if (matchInvokeVirtual(name) | matchInvokeSpecial(name)) {
+            } else if (matchInvokeVirtual(name) | matchInvokeSpecial(name) | matchInvokeInterface(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
                 processor.processInvokeMethod(methodIndex, stack, state, false);
 
@@ -314,20 +312,62 @@ public class MethodAnalyser {
             return new CurrentState(currentStates.getFirst());
         }
 
-        CurrentState curStateResult = CurrentState.getEmptyState(numOfVars, startingDerivatives, startingLoadedClasses, startingInitializedClasses);
+        CurrentState newCurrentState = CurrentState.getEmptyState(numOfVars, startingDerivatives, startingLoadedClasses, startingInitializedClasses);
         if (currentStates.isEmpty()) {
-            return curStateResult;
+            return newCurrentState;
         }
 
+        // merge stacks
         if (!currentStates.getFirst().getStack().isEmpty()) {
-            curStateResult.updateStack(mergeStacks(currentStates));
+            newCurrentState.updateStack(mergeStacks(currentStates));
         }
 
+        // merge local variables
         for (int i = 0; i < numOfVars; i++) {
-            curStateResult.updateVariable(i, mergeEntitiesOfVariable(currentStates, i));
+            newCurrentState.updateVariable(i, mergeEntitiesOfVariable(currentStates, i));
         }
 
-        return curStateResult;
+        // merge loaded classes
+         mergeLoadedClasses(currentStates, newCurrentState);
+
+
+        // merge initialized classes and static fields
+        mergeInitializedClasses(currentStates, newCurrentState);
+
+        return newCurrentState;
+    }
+
+    private void mergeLoadedClasses(List<CurrentState> currentStates, CurrentState newCurrentState) {
+        for (var state : currentStates) {
+            newCurrentState.getLoadedClasses().addAll(state.getLoadedClasses());
+        }
+    }
+
+    private void mergeInitializedClasses(List<CurrentState> currentStates, CurrentState newCurrentState) {
+        var initalisedClasses = newCurrentState.getInitialisedClasses();
+        for (var state : currentStates) {
+            for (var myClass: state.getInitialisedClasses().entrySet()) {
+                String myClassName = myClass.getKey();
+                if (!initalisedClasses.containsKey(myClassName)) {
+                    initalisedClasses.put(myClassName, myClass.getValue());
+                }
+                else {
+                    initalisedClasses.put(myClassName, mergeStaticFields(initalisedClasses.get(myClassName), myClass.getValue()));
+                }
+            }
+        }
+
+        newCurrentState.updateInitialisedClasses(initalisedClasses);
+    }
+
+
+    private Map<String, Entity> mergeStaticFields(Map<String, Entity> staticFields1, Map<String, Entity> staticFields2) {
+        Map<String, Entity> result = new HashMap<>();
+        for (var fieldName : staticFields1.keySet()) {
+            result.put(fieldName, mergeTwoEntities(staticFields1.get(fieldName), staticFields2.get(fieldName)));
+        }
+
+        return result;
     }
 
     private ArrayDeque<Entity> mergeStacks(List<CurrentState> currentStates) {
@@ -357,15 +397,23 @@ public class MethodAnalyser {
 
         for (var state : currentStates) {
             Entity entity = state.getVarValue(varNumber);
-            if (newEntity.compareType(entity) < 0) {
-                newEntity = entity;
-            } else if (newEntity.compareType(entity) == 0) {
-                if (newEntity.isDerivativeSet()) {
-                    newEntity.mergeWithDerivativeSet(entity);
-                }
-            }
+            newEntity = mergeTwoEntities(entity, newEntity);
         }
         return newEntity;
+    }
+
+
+    Entity mergeTwoEntities(Entity first, Entity second) {
+        if (first.compareType(second) > 0) {
+            return first;
+        } else if (first.compareType(second) < 0) {
+            return second;
+        } else if (first.compareType(second) == 0 && first.isDerivativeSet()) {
+            return new Entity(Entity.Type.DERIVATIVE_SET, first.getDerivativeSet(), second.getDerivativeSet());
+        } else {
+            return first;
+        }
+
     }
 
 

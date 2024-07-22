@@ -45,6 +45,12 @@ public class Entity {
         derivativeSet.addAll(List.of(derivatives));
     }
 
+    public Entity(Type type, Set<Derivative> derivativeSet1, Set<Derivative> derivativeSet2) {
+        this.type = type;
+        derivativeSet.addAll(derivativeSet1);
+        derivativeSet.addAll(derivativeSet2);
+    }
+
 
     public Set<Derivative> getDerivativeSet() {
         if (type != DERIVATIVE_SET) {
