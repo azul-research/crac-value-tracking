@@ -8,4 +8,9 @@ public class Foo extends Base {
     Foo() {
         anotherValue = 34;
     }
+
+
+    int value() {
+        return anotherValue;
+    }
 }

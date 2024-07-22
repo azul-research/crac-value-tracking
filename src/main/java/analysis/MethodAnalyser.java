@@ -213,14 +213,14 @@ public class MethodAnalyser {
 
             } else if (matchInvokeVirtual(name) | matchInvokeSpecial(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
-                stack = analyseAnotherMethod(methodIndex, stack, state);
+                processInvokeMethod(methodIndex, stack, state);
 
 //            } else if (matchInvokeStatic(name)) {
 //                var methodIndex = parseNextBytes(iterator, index, 2);
-//                analyseAnotherMethod(methodIndex, stack, state);
+//                processInvokeMethod(methodIndex, stack, state);
 
             } else if (matchReturnVoid(name)) {
-                state.updateReturnState(createdUndefined());
+                state.setEmptyReturn();
 
             } else if (matchReturnValue(name)) {
                 state.updateReturnState(stack.pop());
@@ -298,7 +298,10 @@ public class MethodAnalyser {
     }
 
 
-    private ArrayDeque<Entity> analyseAnotherMethod(int index, ArrayDeque<Entity> stack, CurrentState state) {
+    private void processInvokeStatic() {}
+
+
+    private void processInvokeMethod(int index, ArrayDeque<Entity> stack, CurrentState state) {
         var constPool = method.getDeclaringClass().getClassFile().getConstPool();
         int methodRefIndex = constPool.getMethodrefClass(index);
         String className = constPool.getClassInfo(methodRefIndex);
@@ -314,24 +317,26 @@ public class MethodAnalyser {
                 logger.debug("Parameter Type: {}", paramType.getName());
             }
 
-            int numberOfArguments = parameterTypes.length;
+            int numberOfArguments = parameterTypes.length + 1;
             List<Integer> derivativeArgs = new ArrayList<>();
-            for (int i = 0; i < numberOfArguments; i++) {
-                if (stack.getFirst().isDerivativeSet()) {
+
+            for (int i = numberOfArguments - 1; i > 0; i--) {
+                if (stack.pop().isDerivativeSet()) {
                     derivativeArgs.add(i);
                 }
             }
-            CurrentState resultState = mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, state.getLoadedClasses(), state.getInitialisedClasses());
 
-
-            state.updateStack(resultState.getStack());
-
-            var result = resultState.getReturnState();
-            if (!result.isUndefined()) {
-                stack.push(result);
+            Entity objectRef = stack.pop();
+            if (objectRef.isDerivativeSet()) {
+                derivativeArgs.add(0);
             }
 
-            return state.getStack();
+            CurrentState resultState = mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, state.getLoadedClasses(), state.getInitialisedClasses(), objectRef);
+
+
+            var result = resultState.getReturnState();
+            result.ifPresent(stack::push);
+
 
 
         } catch (NotFoundException e) {
@@ -426,7 +431,7 @@ public class MethodAnalyser {
 
 
     int parseNextBytes(CodeIterator iterator, int index, int bytesNumber) {
-        int result = 1;
+        int result = 0;
         for (int i = 0; i < bytesNumber; i++) {
             int indexbyte = (iterator.byteAt(i + index + 1) & 0xff);
             result = result | (indexbyte << (bytesNumber - i - 1) * 8);

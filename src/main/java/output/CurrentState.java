@@ -12,7 +12,7 @@ public class CurrentState {
     private final Map<String, Map<String, Entity>> initialisedClasses;
 
     private final Entity[] variablesArray;
-    private Entity returnState;
+    private  Optional<Entity> returnState;
     private ArrayDeque<Entity> stack;
 
     public Set<String> getLoadedClasses() {
@@ -27,6 +27,10 @@ public class CurrentState {
         return stack;
     }
 
+    public void setEmptyReturn() {
+        returnState = Optional.empty();
+    }
+
     public void updateStack(ArrayDeque<Entity> stack) {
         this.stack = stack;
     }
@@ -35,17 +39,17 @@ public class CurrentState {
         return variablesArray;
     }
 
-    public Entity getReturnState() {
+    public Optional<Entity> getReturnState() {
         return returnState;
     }
 
 
     public void updateReturnState(Entity entity) {
-        this.returnState = entity;
+        this.returnState = Optional.of(entity);
     }
-    public CurrentState(Entity[] variables, ArrayDeque<Entity> stack, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
+    public CurrentState(Entity[] variables, ArrayDeque<Entity> stack, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses, Optional<Entity> returnState) {
         this.variablesArray = variables;
-        returnState = new Entity(Entity.Type.UNDEFINED);
+        this.returnState = returnState;
         this.stack = stack;
         this.loadedClasses = loadedClasses;
         this.initialisedClasses = initialisedClasses;
@@ -68,7 +72,7 @@ public class CurrentState {
                 vars[i] = new Entity(Entity.Type.UNDEFINED);
             }
         }
-        return new CurrentState(vars, new ArrayDeque<>(), loadedClasses, initialisedClasses);
+        return new CurrentState(vars, new ArrayDeque<>(), loadedClasses, initialisedClasses, Optional.empty());
     }
 
 

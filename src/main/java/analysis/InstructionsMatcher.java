@@ -46,7 +46,7 @@ public class InstructionsMatcher {
     }
 
     static boolean matchBinOperation(String opCode) {
-        String regex = ".{1,2}(add|div|mul|sub)";
+        String regex = ".{1,2}(add|div|mul|sub|shr|shl|rem|or|xor)";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(opCode);
         return matcher.matches();
@@ -130,6 +130,10 @@ public class InstructionsMatcher {
 
     public static boolean matchDuplicateValue(String opcode) {
         return opcode.equals("dup");
+    }
+
+    public static boolean matchPop(String opcode) {
+        return opcode.equals("pop");
     }
 
 

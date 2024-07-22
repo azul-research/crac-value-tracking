@@ -6,7 +6,7 @@ public class Main {
     public static void main(String[] args) {
         Foo f = new Foo();
 
-        int a = f.anotherValue;
+        int a = f.value();
 
     }
 

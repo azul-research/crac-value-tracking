@@ -17,7 +17,7 @@ public class Analyser {
     static final String MAIN_FUNCTION_NAME = "main";
 
 
-    static final Set<String> STANDARD_LIB_CLASSES = Set.of("java.lang.String", "java.lang.ClassLoader");
+    static final Set<String> STANDARD_LIB_CLASSES = Set.of("java.lang.String", "java.lang.ClassLoader", "java.lang.Object");
 
     ControlFlowGraph controlFlowGraph;
     String programJarPath;
@@ -30,13 +30,13 @@ public class Analyser {
     }
 
 
-    public CurrentState analyseMethod(String className, String methodName, List<Integer> derivativeArgs, String desc, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
+    public CurrentState analyseMethod(String className, String methodName, List<Integer> derivativeArgs, String desc, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses, Entity currentObject) {
         prepareClass(className, loadedClasses, initialisedClasses);
 
         var methodCFG = controlFlowGraph.getMethodCFG(className, methodName, desc);
         var method = controlFlowGraph.getBehavior(className, methodName, desc);
 
-        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, new Entity(Entity.Type.UNDEFINED), loadedClasses, initialisedClasses);
+        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, loadedClasses, initialisedClasses);
         analyser.analyse();
 
         return analyser.getAnalysisResult();
@@ -66,7 +66,7 @@ public class Analyser {
         var loadedClasses = new HashSet<String>();
         var initialisedClasses = new HashMap<String, Map<String, Entity>>();
 
-        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, List.of(0), MAIN_FUNCTION_DESC, loadedClasses, initialisedClasses);
+        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, List.of(0), MAIN_FUNCTION_DESC, loadedClasses, initialisedClasses, new Entity(Entity.Type.NON_DERIVATIVE));
     }
 
 
@@ -136,7 +136,7 @@ public class Analyser {
             return;
         }
 
-        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, List.of(), this, new Entity(Entity.Type.UNDEFINED), loadedClasses, initialisedClasses);
+        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, List.of(), this, new Entity(Entity.Type.NON_DERIVATIVE), loadedClasses, initialisedClasses);
         analyser.analyse();
         CurrentState result = analyser.getAnalysisResult();
 
