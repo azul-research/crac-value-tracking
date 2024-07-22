@@ -30,7 +30,7 @@ public class Analyser {
     }
 
 
-    public CurrentState analyseMethod(String className, String methodName, List<Integer> derivativeArgs, String desc, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses, Entity currentObject) {
+    public CurrentState analyseMethod(String className, String methodName, List<Integer> derivativeArgs, String desc, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses, Optional<Entity> currentObject) {
         prepareClass(className, loadedClasses, initialisedClasses);
 
         var methodCFG = controlFlowGraph.getMethodCFG(className, methodName, desc);
@@ -66,7 +66,7 @@ public class Analyser {
         var loadedClasses = new HashSet<String>();
         var initialisedClasses = new HashMap<String, Map<String, Entity>>();
 
-        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, List.of(0), MAIN_FUNCTION_DESC, loadedClasses, initialisedClasses, new Entity(Entity.Type.NON_DERIVATIVE));
+        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, List.of(0), MAIN_FUNCTION_DESC, loadedClasses, initialisedClasses, Optional.empty());
     }
 
 
@@ -136,7 +136,7 @@ public class Analyser {
             return;
         }
 
-        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, List.of(), this, new Entity(Entity.Type.NON_DERIVATIVE), loadedClasses, initialisedClasses);
+        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, List.of(), this, Optional.empty(), loadedClasses, initialisedClasses);
         analyser.analyse();
         CurrentState result = analyser.getAnalysisResult();
 

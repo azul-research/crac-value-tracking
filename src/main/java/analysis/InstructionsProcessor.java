@@ -3,16 +3,24 @@ package analysis;
 import entitites.Entity;
 import entitites.derivatives.OperationDerivative;
 import javassist.CtBehavior;
+import javassist.NotFoundException;
 import javassist.bytecode.CodeIterator;
 import javassist.bytecode.ConstPool;
 import javassist.bytecode.Descriptor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import output.CurrentState;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 import static entitites.Entity.createNonDerivative;
 
 public class InstructionsProcessor {
+
+    private static final Logger logger = LogManager.getLogger(InstructionsProcessor.class);
 
 
     MethodAnalyser analyser;
@@ -79,8 +87,8 @@ public class InstructionsProcessor {
         }
     }
 
-    record StaticFieldInfo(String className, String name) {}
-
+    record StaticFieldInfo(String className, String name) {
+    }
 
 
     void processPutStatic(int indexInConstPool, Entity entity, CurrentState state, int line) {
@@ -100,7 +108,18 @@ public class InstructionsProcessor {
 
     }
 
-    void processPutField() {
+    void processPutField(int index, ArrayDeque<Entity> stack) {
+        var value = stack.pop();
+        var objectRef = stack.pop();
+        if (value.isDerivativeSet()) {
+            if (!objectRef.isDerivativeSet()) {
+                objectRef.setToDerivative();
+                objectRef.setDerivativeSet(analyser.createEntitySuccessor(value, analyser.getLineNumber(index)).getDerivativeSet());
+            } else {
+                objectRef.setDerivativeSet(analyser.createMergedDerivativeSet(value, objectRef, analyser.getLineNumber(index)).getDerivativeSet());
+            }
+
+        }
 
     }
 
@@ -118,5 +137,67 @@ public class InstructionsProcessor {
         String fieldType = Descriptor.toClassName(fieldDescriptor);
 
         return new StaticFieldInfo(className, fieldName);
+    }
+
+
+    private List<Integer> getStaticMethodArguments(int numberOfArguments, ArrayDeque<Entity> stack) {
+        List<Integer> derivativeArgs = new ArrayList<>();
+        for (int i = numberOfArguments - 1; i >= 0; i--) {
+            if (stack.pop().isDerivativeSet()) {
+                derivativeArgs.add(i);
+            }
+        }
+        return derivativeArgs;
+    }
+
+
+    private List<Integer> getNonstaticMethodArguments(int numberOfArguments, ArrayDeque<Entity> stack) {
+        List<Integer> derivativeArgs = new ArrayList<>();
+        for (int i = numberOfArguments; i > 0; i--) {
+            if (stack.pop().isDerivativeSet()) {
+                derivativeArgs.add(i);
+            }
+        }
+
+        return derivativeArgs;
+    }
+
+
+    void processInvokeMethod(int index, ArrayDeque<Entity> stack, CurrentState state, boolean isStatic) {
+        try {
+            var constPool = method.getDeclaringClass().getClassFile().getConstPool();
+            int methodRefIndex = constPool.getMethodrefClass(index);
+            String className = constPool.getClassInfo(methodRefIndex);
+            String methodName = constPool.getMethodrefName(index);
+            String methodDescriptor = constPool.getMethodrefType(index);
+            logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
+
+            int numberOfArguments = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool()).length;
+
+            List<Integer> derivativeArgs;
+
+            Optional<Entity> objectRef = Optional.empty();
+
+            if (isStatic) {
+                derivativeArgs = getStaticMethodArguments(numberOfArguments, stack);
+            } else {
+                derivativeArgs = getNonstaticMethodArguments(numberOfArguments, stack);
+                objectRef = Optional.of(stack.pop());
+                if (objectRef.get().isDerivativeSet()) {
+                    derivativeArgs.add(0);
+                }
+
+            }
+
+            CurrentState resultState = analyser.mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, state.getLoadedClasses(), state.getInitialisedClasses(), objectRef);
+
+            var result = resultState.getReturnState();
+            result.ifPresent(stack::push);
+
+
+        } catch (NotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 }

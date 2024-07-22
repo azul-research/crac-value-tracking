@@ -31,7 +31,7 @@ public class MethodAnalyser {
     int endBlock;
     int numOfVars;
     String fileName;
-    Entity thisObj;
+    Optional<Entity> thisObj;
 
     Analyser mainAnalyser;
     CtBehavior method;
@@ -42,7 +42,7 @@ public class MethodAnalyser {
 
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
-    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, List<Integer> derivativeVars, Analyser mainAnalyser, Entity thisObject, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
+    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, List<Integer> derivativeVars, Analyser mainAnalyser, Optional<Entity> thisObject, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
 
         this.thisObj = thisObject;
         this.mainAnalyser = mainAnalyser;
@@ -213,12 +213,11 @@ public class MethodAnalyser {
 
             } else if (matchInvokeVirtual(name) | matchInvokeSpecial(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
-                processInvokeMethod(methodIndex, stack, state);
+                processor.processInvokeMethod(methodIndex, stack, state, false);
 
-//            } else if (matchInvokeStatic(name)) {
-//                var methodIndex = parseNextBytes(iterator, index, 2);
-//                processInvokeMethod(methodIndex, stack, state);
-
+            } else if (matchInvokeStatic(name)) {
+                var methodIndex = parseNextBytes(iterator, index, 2);
+                processor.processInvokeMethod(methodIndex, stack, state, true);
             } else if (matchReturnVoid(name)) {
                 state.setEmptyReturn();
 
@@ -229,19 +228,7 @@ public class MethodAnalyser {
                 var objectRef = stack.pop();
                 stack.push(createEntitySuccessor(objectRef, getLineNumber(index)));
             } else if (matchPutField(name)) {
-                var value = stack.pop();
-                var objectRef = stack.pop();
-                if (value.isDerivativeSet()) {
-                    if (!objectRef.isDerivativeSet()) {
-                        objectRef.setToDerivative();
-                        objectRef.setDerivativeSet(createEntitySuccessor(value, getLineNumber(index)).getDerivativeSet());
-                    } else {
-                        objectRef.setDerivativeSet(createMergedDerivativeSet(value, objectRef, getLineNumber(index)).getDerivativeSet());
-                    }
-
-                }
-
-
+                processor.processPutField(index, stack);
             } else if (matchGetStatic(name)) {
                 int indexInConstPool = parseNextBytes(iterator, index, 2);
                 Entity staticField = processor.processGetStatic(indexInConstPool, state);
@@ -283,7 +270,7 @@ public class MethodAnalyser {
         }
     }
 
-    private Entity createMergedDerivativeSet(Entity first, Entity second, int codeLine) {
+    Entity createMergedDerivativeSet(Entity first, Entity second, int codeLine) {
         assert first.isDerivativeSet();
         assert second.isDerivativeSet();
 
@@ -295,54 +282,6 @@ public class MethodAnalyser {
             }
         }
         return result;
-    }
-
-
-    private void processInvokeStatic() {}
-
-
-    private void processInvokeMethod(int index, ArrayDeque<Entity> stack, CurrentState state) {
-        var constPool = method.getDeclaringClass().getClassFile().getConstPool();
-        int methodRefIndex = constPool.getMethodrefClass(index);
-        String className = constPool.getClassInfo(methodRefIndex);
-        String methodName = constPool.getMethodrefName(index);
-        String methodDescriptor = constPool.getMethodrefType(index);
-
-        logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
-
-        try {
-            CtClass[] parameterTypes = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool());
-            logger.debug("Number of arguments: {}", parameterTypes.length);
-            for (CtClass paramType : parameterTypes) {
-                logger.debug("Parameter Type: {}", paramType.getName());
-            }
-
-            int numberOfArguments = parameterTypes.length + 1;
-            List<Integer> derivativeArgs = new ArrayList<>();
-
-            for (int i = numberOfArguments - 1; i > 0; i--) {
-                if (stack.pop().isDerivativeSet()) {
-                    derivativeArgs.add(i);
-                }
-            }
-
-            Entity objectRef = stack.pop();
-            if (objectRef.isDerivativeSet()) {
-                derivativeArgs.add(0);
-            }
-
-            CurrentState resultState = mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, state.getLoadedClasses(), state.getInitialisedClasses(), objectRef);
-
-
-            var result = resultState.getReturnState();
-            result.ifPresent(stack::push);
-
-
-
-        } catch (NotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
     }
 
 
@@ -367,10 +306,10 @@ public class MethodAnalyser {
             blockIndex = block.incoming(i).position();
             predecessors.add(currentBlocksStates.get(blockIndex));
         }
-        return mergeCurStates(predecessors);
+        return mergeCurrentStates(predecessors);
     }
 
-    private CurrentState mergeCurStates(List<CurrentState> currentStates) {
+    private CurrentState mergeCurrentStates(List<CurrentState> currentStates) {
         if (currentStates.size() == 1) {
             return new CurrentState(currentStates.getFirst());
         }
@@ -438,7 +377,6 @@ public class MethodAnalyser {
         }
         return result;
     }
-
 
 
 }
