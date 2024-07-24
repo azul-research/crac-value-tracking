@@ -40,7 +40,11 @@ public class Analyser {
         var method = controlFlowGraph.getBehavior(className, methodName, desc);
 
         if (Modifier.isNative(method.getModifiers())) {
-            return CurrentState.getEmptyState(0, Map.of(), jvmState);
+            var nativeMethodState = CurrentState.getEmptyState(0, Map.of(), jvmState);
+            if (!method.getMethodInfo().getDescriptor().endsWith("V")) {
+                nativeMethodState.updateReturnState(new Entity(Entity.Type.NON_DERIVATIVE));
+            }
+            return nativeMethodState;
         }
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, jvmState);
         analyser.analyse();
@@ -54,9 +58,9 @@ public class Analyser {
     }
 
     public void prepareClass(String className, JVMState jvmState) {
-        if (classFromStandardLib(className)) {
-            return;
-        }
+//        if (classFromStandardLib(className)) {
+//            return;
+//        }
 
         MyClass myClass = new MyClass(className);
         if (!jvmState.containsLoadedClass(myClass)) {
@@ -111,7 +115,6 @@ public class Analyser {
         } catch (NotFoundException e) {
             throw new RuntimeException(e);
         }
-
 
         // execute initializer
         executeInitializer(initializer, initializerCFG, jvmState);

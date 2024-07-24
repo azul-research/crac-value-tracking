@@ -4,6 +4,7 @@ import entitites.Entity;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class ClassStaticFields {
 
@@ -38,4 +39,16 @@ public class ClassStaticFields {
      }
 
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ClassStaticFields that = (ClassStaticFields) o;
+        return Objects.equals(myClass, that.myClass) && Objects.equals(staticFields, that.staticFields);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(myClass, staticFields);
+    }
 }

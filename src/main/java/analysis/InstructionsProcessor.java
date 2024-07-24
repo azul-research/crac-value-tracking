@@ -20,9 +20,7 @@ import java.util.Optional;
 import static entitites.Entity.createNonDerivative;
 
 public class InstructionsProcessor {
-
     private static final Logger logger = LogManager.getLogger(InstructionsProcessor.class);
-
 
     MethodAnalyser analyser;
     CtBehavior method;

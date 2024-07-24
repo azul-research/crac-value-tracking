@@ -234,7 +234,6 @@ public class MethodAnalyser {
                 int indexInConstPool = parseNextBytes(iterator, index, 2);
                 Entity staticField = processor.processGetStatic(indexInConstPool, state);
                 stack.push(staticField);
-
             } else if (matchPutStatic(name)) {
                 int indexInConstPool = parseNextBytes(iterator, index, 2);
                 processor.processPutStatic(indexInConstPool, stack.pop(), state, getLineNumber(index));
@@ -244,7 +243,15 @@ public class MethodAnalyser {
                 stack.push(createNonDerivative());
             } else if (matchDuplicateValue(name)) {
                 stack.push(stack.getFirst());
-            } else if (!matchIf(name) && !matchGoto(name)) {
+            } else if (matchPop(name) | matchMonitor(name)) {
+                stack.pop();
+            } else if (matchIfWith2Arguments(name)) {
+                stack.pop();
+                stack.pop();
+            } else if (matchIfWith1Argument(name)) {
+                stack.pop();
+            }
+            else if (!matchGoto(name)) {
                 logger.warn("UNKNOWN OPCODE: {}", name);
             }
 
@@ -365,7 +372,7 @@ public class MethodAnalyser {
             result.put(fieldName, mergeTwoEntities(staticFields1.getField(fieldName), staticFields2.getField(fieldName)));
         }
 
-        return  new ClassStaticFields(staticFields1.getMyClass(), result);
+        return new ClassStaticFields(staticFields1.getMyClass(), result);
     }
 
     private void mergeStacks(List<CurrentState> currentStates, CurrentState newCurrentState) {

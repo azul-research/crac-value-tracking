@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import output.CurrentState;
+import output.MyClass;
 
 import java.io.IOException;
 
@@ -13,10 +14,10 @@ public class CurrentStateSerializer extends JsonSerializer<CurrentState> {
 
         try {
             jsonGenerator.writeStartObject();
-            jsonGenerator.writeObjectField("loaded classes", currentState.getLoadedClasses());
-            jsonGenerator.writeObjectField("initialised classes", currentState.getInitialisedClasses().keySet());
-            jsonGenerator.writeObjectField("static fields", currentState.getInitialisedClasses());
-            jsonGenerator.writeObjectField("variables array", currentState.getVariablesArray());
+            jsonGenerator.writeObjectField("loadedClasses", currentState.getLoadedClasses().stream().map(MyClass::getFullName).toArray());
+            jsonGenerator.writeObjectField("initialisedClasses", currentState.getInitialisedClasses().keySet().stream().map(MyClass::getFullName).toArray());
+            jsonGenerator.writeObjectField("staticFields", currentState.getInitialisedClasses());
+            jsonGenerator.writeObjectField("variablesArray", currentState.getVariablesArray());
             jsonGenerator.writeEndObject();
 
         } catch (IOException e) {

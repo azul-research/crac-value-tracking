@@ -5,8 +5,8 @@ import java.util.ArrayList;
 public class Main {
 
     public static void main(String[] args) {
-        var a = new ArrayList<String>();
-        a.add(args[0]);
+        var a = args[0];
+        var b = a.charAt(0);
 
     }
 

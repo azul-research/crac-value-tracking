@@ -5,8 +5,11 @@ import java.util.regex.Pattern;
 
 public class InstructionsMatcher {
 
-    public static boolean matchIf(String opCode) {
-        return opCode.startsWith("if");
+    public static boolean matchIfWith2Arguments(String opCode) {
+        return opCode.startsWith("if_");
+    }
+    public static boolean matchIfWith1Argument(String opCode) {
+        return opCode.startsWith("if") && opCode.charAt(2) != '_';
     }
 
     static boolean matchConstLoad(String opCode) {
@@ -52,6 +55,19 @@ public class InstructionsMatcher {
         return matcher.matches();
     }
 
+    public static boolean matchStoreToArray(String opcode) {
+        String regex = ".astore";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(opcode);
+        return matcher.matches();
+    }
+
+    public static boolean matchReturnValue(String opcode) {
+        String regex = ".return";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(opcode);
+        return matcher.matches();
+    }
 
     static boolean matchLoadArrayElem(String opcode) {
         return opcode.equals("aaload");
@@ -63,13 +79,6 @@ public class InstructionsMatcher {
 
     public static boolean matchCreateArray(String opcode) {
         return opcode.equals("anewarray");
-    }
-
-    public static boolean matchStoreToArray(String opcode) {
-        String regex = ".astore";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opcode);
-        return matcher.matches();
     }
 
     public static boolean matchIncrementLocal(String opcode) {
@@ -87,7 +96,6 @@ public class InstructionsMatcher {
     public static boolean matchInvokeInterface(String opcode) {
         return opcode.equals("invokeinterface");
     }
-
 
     public static boolean matchInvokeDynamic(String opcode) {
         return opcode.equals("invokedynamic");
@@ -118,14 +126,6 @@ public class InstructionsMatcher {
         return opcode.equals("arraylength");
     }
 
-
-    public static boolean matchReturnValue(String opcode) {
-        String regex = ".return";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opcode);
-        return matcher.matches();
-    }
-
     public static boolean matchReturnVoid(String opcode) {
         return opcode.equals("return");
     }
@@ -142,6 +142,9 @@ public class InstructionsMatcher {
         return opcode.equals("pop");
     }
 
+    public static boolean matchMonitor(String opcode) {
+        return opcode.startsWith("monitor");
+    }
 
     public static int getNumberInOpCode(String opCode) {
         String regex = ".*_(.*)";
