@@ -1,21 +1,18 @@
-package examples.staticfields;
+package examples.simplestaticfield;
 
 public class Main {
-    static String staticField;
+    static String field;
+
 
     public static void main(String[] args) {
         String a = args[0];
-
         int i = 0;
-
         if (i > 0) {
-            staticField = args[1];
+            field = a;
         }
         else {
-            staticField = a;
+            field = args[1];
         }
-
-        Base.field = args;
     }
 
 }

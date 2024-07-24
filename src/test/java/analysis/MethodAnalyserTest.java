@@ -78,10 +78,8 @@ public class MethodAnalyserTest {
 
 
     public CurrentState analyseMainFunction(String jarFilePath, String className) {
-
         Analyser analyser = new Analyser(jarFilePath, className);
         return analyser.analyseProgram();
-
-
     }
+
 }

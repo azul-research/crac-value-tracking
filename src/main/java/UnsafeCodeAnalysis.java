@@ -34,7 +34,7 @@ public class UnsafeCodeAnalysis {
 
         CurrentState result = analyser.analyseProgram();
 
-        saveToJson(result, "result.json");
+        saveToJson(result, "result1.json");
 
 //        analyseMethod(getSourceFile("java"), "java.lang.String", "contentEquals", List.of(0, 1));
 //        analyseMethod(args[0], args[1], "main", List.of(0));

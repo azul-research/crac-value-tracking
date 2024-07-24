@@ -7,12 +7,17 @@ import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import output.ClassStaticFields;
 import output.CurrentState;
+import output.JVMState;
+import output.MyClass;
 
 import java.util.*;
 
 import static analysis.InstructionsMatcher.*;
+import static analysis.InstructionsProcessor.parseNextBytes;
 import static entitites.Entity.createNonDerivative;
+import static output.CurrentState.getEmptyState;
 
 public class MethodAnalyser {
     private static final Logger logger = LogManager.getLogger(MethodAnalyser.class);
@@ -34,13 +39,14 @@ public class MethodAnalyser {
     Analyser mainAnalyser;
     CtBehavior method;
 
+    JVMState startingJvmState;
     Map<Integer, String> startingDerivatives;
     Set<String> startingLoadedClasses;
     Map<String, Map<String, Entity>> startingInitializedClasses;
 
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
-    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, List<Integer> derivativeVars, Analyser mainAnalyser, Optional<Entity> thisObject, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
+    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, List<Integer> derivativeVars, Analyser mainAnalyser, Optional<Entity> thisObject, JVMState jvmState) {
 
         this.thisObj = thisObject;
         this.mainAnalyser = mainAnalyser;
@@ -58,9 +64,8 @@ public class MethodAnalyser {
         logger.debug("Start block: {}, end block: {}", startBlock, endBlock);
 
         this.numOfVars = codeAttribute.getMaxLocals();
-        this.startingLoadedClasses = loadedClasses;
-        this.startingInitializedClasses = initialisedClasses;
-        setCurrentBlocksStates(numOfVars, this.startingDerivatives, loadedClasses, initialisedClasses);
+        this.startingJvmState = jvmState;
+        setCurrentBlocksStates(numOfVars, this.startingDerivatives, jvmState);
 
         this.processor = new InstructionsProcessor(this, method);
 
@@ -80,7 +85,6 @@ public class MethodAnalyser {
     Integer getLineNumber(int i) { // i - number of bytecode instruction in method
         var attribute = (LineNumberAttribute) codeAttribute.getAttribute(LineNumberAttribute.tag);
         return attribute.toLineNumber(i);
-
     }
 
 
@@ -100,10 +104,10 @@ public class MethodAnalyser {
         }
     }
 
-    private void setCurrentBlocksStates(int numOfVars, Map<Integer, String> derivativeVars, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
+    private void setCurrentBlocksStates(int numOfVars, Map<Integer, String> derivativeVars, JVMState jvmState) {
         currentBlocksStates = new HashMap<>();
         for (var index : methodCFG.keySet()) {
-            currentBlocksStates.put(index, CurrentState.getEmptyState(numOfVars, derivativeVars, loadedClasses, initialisedClasses));
+            currentBlocksStates.put(index, getEmptyState(numOfVars, derivativeVars, jvmState));
         }
     }
 
@@ -116,18 +120,12 @@ public class MethodAnalyser {
 
     public void analyse() {
         logger.debug("Analysing method: {}", method.getName());
-        for (var block : blocks) {
-            analyseBasicBlock(block.position());
-        }
+        analyseAllBlocks();
 
         CurrentState previousState;
         do {
             previousState = currentBlocksStates.get(endBlock);
-            for (var block : blocks) {
-                if (block.position() != startBlock) {
-                    analyseBasicBlock(block.position());
-                }
-            }
+            analyseAllBlocks();
         } while (!previousState.equals(currentBlocksStates.get(endBlock)));
 
         var finalState = currentBlocksStates.get(endBlock);
@@ -135,16 +133,23 @@ public class MethodAnalyser {
 
     }
 
+    private void analyseAllBlocks() {
+        for (var block : blocks) {
+            analyseBasicBlock(block.position());
+        }
+    }
+
+
     private void logFinalState(CurrentState finalState) {
         logger.info("Variables at the end of the method:");
         for (int i = 0; i < numOfVars; i++) {
-            logger.info("{} - {}", getVarName(i), finalState.getVarValue(i).info(0));
+            logger.info("{} - {}", getVarName(i), finalState.getVariableValue(i).info(0));
         }
 
         logger.info("Static fields at the end of the method:");
         for (var cl : finalState.getInitialisedClasses().entrySet()) {
             logger.info("Fields of class {}", cl.getKey());
-            for (var field : cl.getValue().entrySet()) {
+            for (var field : cl.getValue().getStaticFields().entrySet()) {
                 logger.info("{} - {}", field.getKey(), field.getValue().info(0));
 
             }
@@ -155,7 +160,7 @@ public class MethodAnalyser {
         logger.debug("Analysing block: {}", blockIndex);
         CurrentState state;
         if (blockIndex == startBlock) {
-            state = CurrentState.getEmptyState(numOfVars, startingDerivatives, startingLoadedClasses, startingInitializedClasses);
+            state = getEmptyState(numOfVars, startingDerivatives, startingJvmState);
         } else {
             state = getStartingState(blockIndex);
         }
@@ -190,12 +195,10 @@ public class MethodAnalyser {
 
             } else if (matchLoadVariable(name)) {
                 var varNumber = getNumberInOpCode(name);
-                stack.push(state.getVarValue(varNumber));
+                stack.push(state.getVariableValue(varNumber));
 
             } else if (matchLoadArrayElem(name)) {
-                var arrayIndex = stack.pop();
-                var valueOnStack = stack.pop();
-                stack.push(valueOnStack);
+                processor.processLoadArrayElement(stack);
 
             } else if (matchBinOperation(name)) {
                 processor.processBinOperation(index, stack);
@@ -251,24 +254,19 @@ public class MethodAnalyser {
     }
 
 
-    private Entity createdUndefined() {
-        return new Entity(Entity.Type.UNDEFINED);
-    }
-
-
-    Entity createMergedEntity(Entity first, Entity second, int codeLine) {
+    Entity createEntitiesUnion(Entity first, Entity second, int codeLine) {
         if (first.compareType(second) > 0) {
             return first;
         } else if (first.compareType(second) < 0) {
             return second;
         } else if (first.compareType(second) == 0 && first.isDerivativeSet()) {
-            return createMergedDerivativeSet(first, second, codeLine);
+            return createDerivativeSetsUnion(first, second, codeLine);
         } else {
             return first;
         }
     }
 
-    Entity createMergedDerivativeSet(Entity first, Entity second, int codeLine) {
+    Entity createDerivativeSetsUnion(Entity first, Entity second, int codeLine) {
         assert first.isDerivativeSet();
         assert second.isDerivativeSet();
 
@@ -282,7 +280,6 @@ public class MethodAnalyser {
         return result;
     }
 
-
     Entity createEntitySuccessor(Entity oldValue, int line) {
         if (!oldValue.isDerivativeSet()) {
             return oldValue;
@@ -295,14 +292,14 @@ public class MethodAnalyser {
         return newValue;
     }
 
-    private CurrentState getStartingState(int index) {
-        var block = methodCFG.get(index);
+    private CurrentState getStartingState(int blockIndex) {
+        var block = methodCFG.get(blockIndex);
         int num = block.incomings();
         List<CurrentState> predecessors = new ArrayList<>();
-        int blockIndex;
+        int incomingBlockIndex;
         for (int i = 0; i < num; i++) {
-            blockIndex = block.incoming(i).position();
-            predecessors.add(currentBlocksStates.get(blockIndex));
+            incomingBlockIndex = block.incoming(i).position();
+            predecessors.add(currentBlocksStates.get(incomingBlockIndex));
         }
         return mergeCurrentStates(predecessors);
     }
@@ -312,29 +309,30 @@ public class MethodAnalyser {
             return new CurrentState(currentStates.getFirst());
         }
 
-        CurrentState newCurrentState = CurrentState.getEmptyState(numOfVars, startingDerivatives, startingLoadedClasses, startingInitializedClasses);
+        CurrentState newCurrentState = getEmptyState(numOfVars, startingDerivatives, startingJvmState);
+
         if (currentStates.isEmpty()) {
             return newCurrentState;
         }
 
         // merge stacks
-        if (!currentStates.getFirst().getStack().isEmpty()) {
-            newCurrentState.updateStack(mergeStacks(currentStates));
-        }
+        mergeStacks(currentStates, newCurrentState);
 
         // merge local variables
-        for (int i = 0; i < numOfVars; i++) {
-            newCurrentState.updateVariable(i, mergeEntitiesOfVariable(currentStates, i));
-        }
+        mergeVariables(currentStates, newCurrentState);
 
+        // merge jvm states
+        mergeJvmStates(currentStates, newCurrentState);
+
+        return newCurrentState;
+    }
+
+    private void mergeJvmStates(List<CurrentState> currentStates, CurrentState newCurrentState) {
         // merge loaded classes
-         mergeLoadedClasses(currentStates, newCurrentState);
-
+        mergeLoadedClasses(currentStates, newCurrentState);
 
         // merge initialized classes and static fields
         mergeInitializedClasses(currentStates, newCurrentState);
-
-        return newCurrentState;
     }
 
     private void mergeLoadedClasses(List<CurrentState> currentStates, CurrentState newCurrentState) {
@@ -344,59 +342,63 @@ public class MethodAnalyser {
     }
 
     private void mergeInitializedClasses(List<CurrentState> currentStates, CurrentState newCurrentState) {
-        var initalisedClasses = newCurrentState.getInitialisedClasses();
+        Map<MyClass, ClassStaticFields> newInitialisedClasses = new HashMap<>();
         for (var state : currentStates) {
-            for (var myClass: state.getInitialisedClasses().entrySet()) {
-                String myClassName = myClass.getKey();
-                if (!initalisedClasses.containsKey(myClassName)) {
-                    initalisedClasses.put(myClassName, myClass.getValue());
-                }
-                else {
-                    initalisedClasses.put(myClassName, mergeStaticFields(initalisedClasses.get(myClassName), myClass.getValue()));
+            for (var myClass : state.getInitialisedClasses().entrySet()) {
+                MyClass myClassName = myClass.getKey();
+                if (!newInitialisedClasses.containsKey(myClassName)) {
+                    newInitialisedClasses.put(myClassName, myClass.getValue());
+                } else {
+                    newInitialisedClasses.put(myClassName, mergeStaticFields(newInitialisedClasses.get(myClassName), myClass.getValue()));
                 }
             }
+
         }
 
-        newCurrentState.updateInitialisedClasses(initalisedClasses);
+        newCurrentState.updateInitialisedClasses(newInitialisedClasses);
     }
 
 
-    private Map<String, Entity> mergeStaticFields(Map<String, Entity> staticFields1, Map<String, Entity> staticFields2) {
+    private ClassStaticFields mergeStaticFields(ClassStaticFields staticFields1, ClassStaticFields staticFields2) {
         Map<String, Entity> result = new HashMap<>();
-        for (var fieldName : staticFields1.keySet()) {
-            result.put(fieldName, mergeTwoEntities(staticFields1.get(fieldName), staticFields2.get(fieldName)));
+        for (var fieldName : staticFields1.getStaticFields().keySet()) {
+            result.put(fieldName, mergeTwoEntities(staticFields1.getField(fieldName), staticFields2.getField(fieldName)));
         }
 
-        return result;
+        return  new ClassStaticFields(staticFields1.getMyClass(), result);
     }
 
-    private ArrayDeque<Entity> mergeStacks(List<CurrentState> currentStates) {
+    private void mergeStacks(List<CurrentState> currentStates, CurrentState newCurrentState) {
         int stackSize = currentStates.getFirst().getStack().size();
-        Entity[] result = new Entity[stackSize];
+        if (stackSize == 0) {
+            return;
+        }
+        Entity[] newStack = new Entity[stackSize];
 
         for (int i = 0; i < stackSize; i++) {
             Entity newEntity = new Entity(Entity.Type.UNDEFINED);
 
             for (var state : currentStates) {
                 Entity entity = state.getStack().toArray(Entity[]::new)[i];
-                if (newEntity.compareType(entity) < 0) {
-                    newEntity = entity;
-                } else if (newEntity.compareType(entity) == 0) {
-                    if (newEntity.isDerivativeSet()) {
-                        newEntity.mergeWithDerivativeSet(entity);
-                    }
-                }
+                newEntity = mergeTwoEntities(newEntity, entity);
             }
-            result[i] = newEntity;
+            newStack[i] = newEntity;
         }
-        return new ArrayDeque<>(Arrays.asList(result));
+        newCurrentState.updateStack(new ArrayDeque<>(Arrays.asList(newStack)));
     }
 
-    Entity mergeEntitiesOfVariable(List<CurrentState> currentStates, int varNumber) {
+
+    void mergeVariables(List<CurrentState> currentStates, CurrentState newCurrentState) {
+        for (int i = 0; i < numOfVars; i++) {
+            newCurrentState.updateVariable(i, mergeVariableEntities(currentStates, i));
+        }
+    }
+
+    Entity mergeVariableEntities(List<CurrentState> currentStates, int varNumber) {
         Entity newEntity = new Entity(Entity.Type.UNDEFINED);
 
         for (var state : currentStates) {
-            Entity entity = state.getVarValue(varNumber);
+            Entity entity = state.getVariableValue(varNumber);
             newEntity = mergeTwoEntities(entity, newEntity);
         }
         return newEntity;
@@ -415,16 +417,5 @@ public class MethodAnalyser {
         }
 
     }
-
-
-    int parseNextBytes(CodeIterator iterator, int index, int bytesNumber) {
-        int result = 0;
-        for (int i = 0; i < bytesNumber; i++) {
-            int indexbyte = (iterator.byteAt(i + index + 1) & 0xff);
-            result = result | (indexbyte << (bytesNumber - i - 1) * 8);
-        }
-        return result;
-    }
-
 
 }

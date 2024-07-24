@@ -4,7 +4,10 @@ import entitites.Entity;
 import input.ControlFlowGraph;
 import javassist.*;
 import javassist.bytecode.analysis.ControlFlow;
+import output.ClassStaticFields;
 import output.CurrentState;
+import output.JVMState;
+import output.MyClass;
 
 import java.util.*;
 
@@ -30,16 +33,16 @@ public class Analyser {
     }
 
 
-    public CurrentState analyseMethod(String className, String methodName, List<Integer> derivativeArgs, String desc, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses, Optional<Entity> currentObject) {
-        prepareClass(className, loadedClasses, initialisedClasses);
+    public CurrentState analyseMethod(String className, String methodName, List<Integer> derivativeArgs, String desc, Optional<Entity> currentObject, JVMState jvmState) {
+        prepareClass(className, jvmState);
 
         var methodCFG = controlFlowGraph.getMethodCFG(className, methodName, desc);
         var method = controlFlowGraph.getBehavior(className, methodName, desc);
 
         if (Modifier.isNative(method.getModifiers())) {
-            return CurrentState.getEmptyState(0, Map.of(), loadedClasses, initialisedClasses);
+            return CurrentState.getEmptyState(0, Map.of(), jvmState);
         }
-        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, loadedClasses, initialisedClasses);
+        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, jvmState);
         analyser.analyse();
 
         return analyser.getAnalysisResult();
@@ -50,36 +53,25 @@ public class Analyser {
         return STANDARD_LIB_CLASSES.contains(className);
     }
 
-    public void prepareClass(String className, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
+    public void prepareClass(String className, JVMState jvmState) {
         if (classFromStandardLib(className)) {
             return;
         }
 
-        if (!loadedClasses.contains(className)) {
-            loadClass(className, loadedClasses);
+        MyClass myClass = new MyClass(className);
+        if (!jvmState.containsLoadedClass(myClass)) {
+            jvmState.addLoadedClass(myClass);
         }
 
-        if (!initialisedClasses.containsKey(className)) {
-            initialiseClass(className, loadedClasses, initialisedClasses);
+        if (!jvmState.containsInitializedClass(myClass)) {
+            initialiseClass(myClass, jvmState);
         }
     }
 
 
     public CurrentState analyseProgram() {
-        var loadedClasses = new HashSet<String>();
-        var initialisedClasses = new HashMap<String, Map<String, Entity>>();
-
-        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, List.of(0), MAIN_FUNCTION_DESC, loadedClasses, initialisedClasses, Optional.empty());
-    }
-
-
-    private void loadClass(String className, Set<String> loadedClasses) {
-        loadedClasses.add(className);
-
-//        CtClass curClass = controlFlowGraph.getClass(className);
-//        loadedClasses.add(getSuperClass(curClass).getName());
-//
-//        for ()
+        var jvmState = new JVMState();
+        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, List.of(0), MAIN_FUNCTION_DESC, Optional.empty(), jvmState);
     }
 
 
@@ -91,29 +83,29 @@ public class Analyser {
         }
     }
 
-    private void initialiseClass(String className, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
-        initialisedClasses.put(className, new HashMap<>());
+    private void initialiseClass(MyClass myClass, JVMState jvmState) {
+        jvmState.addInitialisedClass(myClass, new ClassStaticFields(myClass));
 
-        ControlFlow.Block[] initializerCFG = controlFlowGraph.createInitializerCFG(className);
-        var initializer = controlFlowGraph.getInitializer(className);
-        CtClass curClass = controlFlowGraph.getClass(className);
+        ControlFlow.Block[] initializerCFG = controlFlowGraph.createInitializerCFG(myClass.getFullName());
+        var initializer = controlFlowGraph.getInitializer(myClass.getFullName());
+        CtClass curClass = controlFlowGraph.getClass(myClass.getFullName());
 
         // default values to static fields
         CtField[] staticFields = getStaticFields(curClass);
         for (var field : staticFields) {
-            initialisedClasses.get(className).put(field.getName(), new Entity(Entity.Type.NON_DERIVATIVE));
+            jvmState.addClassStaticField(myClass, field.getName(), new Entity(Entity.Type.NON_DERIVATIVE));
         }
 
         // initialise predecessors
         var declaringClass = getSuperClass(curClass);
         if (declaringClass != null) {
-            prepareClass(declaringClass.getName(), loadedClasses, initialisedClasses);
+            prepareClass(declaringClass.getName(), jvmState);
         }
 
         // TODO
         try {
             for (var interf : curClass.getInterfaces()) {
-                prepareClass(interf.getName(), loadedClasses, initialisedClasses);
+                prepareClass(interf.getName(), jvmState);
             }
 
         } catch (NotFoundException e) {
@@ -122,7 +114,7 @@ public class Analyser {
 
 
         // execute initializer
-        executeInitializer(initializer, initializerCFG, loadedClasses, initialisedClasses);
+        executeInitializer(initializer, initializerCFG, jvmState);
 
     }
 
@@ -134,16 +126,16 @@ public class Analyser {
     }
 
 
-    private void executeInitializer(CtConstructor initializer, ControlFlow.Block[] initializerCFG, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
+    private void executeInitializer(CtConstructor initializer, ControlFlow.Block[] initializerCFG, JVMState jvmState) {
         if (initializer == null) {
             return;
         }
 
-        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, List.of(), this, Optional.empty(), loadedClasses, initialisedClasses);
+        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, List.of(), this, Optional.empty(), jvmState);
         analyser.analyse();
         CurrentState result = analyser.getAnalysisResult();
 
-        loadedClasses.addAll(result.getLoadedClasses());
-        initialisedClasses.putAll(result.getInitialisedClasses());
+        jvmState.addLoadedClasses(result.getLoadedClasses());
+        jvmState.addInitialisedClasses(result.getInitialisedClasses());
     }
 }

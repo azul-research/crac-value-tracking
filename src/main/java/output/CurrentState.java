@@ -5,34 +5,38 @@ import entitites.derivatives.RootDerivative;
 
 import java.util.*;
 
-
 public class CurrentState {
 
-    private final Set<String> loadedClasses;
-    private Map<String, Map<String, Entity>> initialisedClasses;
-
     private final Entity[] variablesArray;
-    private  Optional<Entity> returnState;
     private ArrayDeque<Entity> stack;
+    private Optional<Entity> returnState;
 
-    public Set<String> getLoadedClasses() {
-        return loadedClasses;
+    private final JVMState jvmState;
+
+    public CurrentState(Entity[] variables, ArrayDeque<Entity> stack, Optional<Entity> returnState, JVMState jvmState) {
+        this.variablesArray = variables.clone();
+        this.returnState = returnState;
+        this.stack = new ArrayDeque<>(stack);
+        this.jvmState = new JVMState(jvmState);
     }
 
-    public Map<String, Map<String, Entity>> getInitialisedClasses() {
-        return initialisedClasses;
+    public CurrentState(CurrentState state) {
+        this.variablesArray = state.variablesArray.clone();
+        this.returnState = state.returnState;
+        this.stack = new ArrayDeque<>(state.stack);
+        this.jvmState = new JVMState(state.jvmState);
+    }
+
+    public Set<MyClass> getLoadedClasses() {
+        return jvmState.getLoadedClasses();
+    }
+
+    public Map<MyClass, ClassStaticFields> getInitialisedClasses() {
+        return jvmState.getInitializedClasses();
     }
 
     public ArrayDeque<Entity> getStack() {
         return stack;
-    }
-
-    public void setEmptyReturn() {
-        returnState = Optional.empty();
-    }
-
-    public void updateStack(ArrayDeque<Entity> stack) {
-        this.stack = stack;
     }
 
     public Entity[] getVariablesArray() {
@@ -43,54 +47,48 @@ public class CurrentState {
         return returnState;
     }
 
+    public JVMState getJvmState() {
+        return jvmState;
+    }
+
+    public Entity getVariableValue(int var) {
+        return variablesArray[var];
+    }
+
+    public void setEmptyReturn() {
+        returnState = Optional.empty();
+    }
+
+    public void updateStack(ArrayDeque<Entity> stack) {
+        this.stack = new ArrayDeque<>(stack);
+    }
 
     public void updateReturnState(Entity entity) {
         this.returnState = Optional.of(entity);
     }
-    public CurrentState(Entity[] variables, ArrayDeque<Entity> stack, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses, Optional<Entity> returnState) {
-        this.variablesArray = variables;
-        this.returnState = returnState;
-        this.stack = stack;
-        this.loadedClasses = loadedClasses;
-        this.initialisedClasses = initialisedClasses;
-    }
-
-    public CurrentState(CurrentState state) {
-        this.variablesArray = state.variablesArray.clone();
-        this.returnState = state.returnState;
-        this.stack = state.stack;
-        this.loadedClasses = state.loadedClasses;
-        this.initialisedClasses = state.initialisedClasses;
-    }
-
-    public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives, Set<String> loadedClasses, Map<String, Map<String, Entity>> initialisedClasses) {
-        Entity[] vars = new Entity[numberOfVars];
-        for (int i = 0; i < numberOfVars; i++) {
-            if (derivatives.containsKey(i)) {
-                vars[i] = new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative(derivatives.get(i)));
-            } else {
-                vars[i] = new Entity(Entity.Type.UNDEFINED);
-            }
-        }
-        return new CurrentState(vars, new ArrayDeque<>(), loadedClasses, initialisedClasses, Optional.empty());
-    }
-
 
     public void updateVariable(Integer number, Entity newValue) {
         variablesArray[number] = newValue;
     }
 
-
-    public void updateInitialisedClasses(Map<String, Map<String, Entity>> newInitialisedClasses) {
-        this.initialisedClasses = newInitialisedClasses;
+    public void updateInitialisedClasses(Map<MyClass, ClassStaticFields> newInitialisedClasses) {
+        jvmState.setInitializedClasses(newInitialisedClasses);
     }
 
-    public boolean isDerivative(Integer var) {
+    public boolean isVariableDerivative(Integer var) {
         return variablesArray[var].isDerivativeSet();
     }
 
-    public Entity getVarValue(int var) {
-        return variablesArray[var];
+    public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives, JVMState jvmState) {
+        Entity[] localVariables = new Entity[numberOfVars];
+        for (int i = 0; i < numberOfVars; i++) {
+            if (derivatives.containsKey(i)) {
+                localVariables[i] = new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative(derivatives.get(i)));
+            } else {
+                localVariables[i] = new Entity(Entity.Type.UNDEFINED);
+            }
+        }
+        return new CurrentState(localVariables, new ArrayDeque<>(), Optional.empty(), jvmState);
     }
 
     @Override
@@ -105,7 +103,5 @@ public class CurrentState {
     public int hashCode() {
         return Arrays.hashCode(variablesArray);
     }
-
-
 
 }

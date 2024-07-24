@@ -10,6 +10,7 @@ import javassist.bytecode.Descriptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import output.CurrentState;
+import output.MyClass;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -36,7 +37,7 @@ public class InstructionsProcessor {
     public void processBinOperation(int index, ArrayDeque<Entity> stack) {
         var first = stack.pop();
         var second = stack.pop();
-        stack.push(analyser.createMergedEntity(first, second, analyser.getLineNumber(index)));
+        stack.push(analyser.createEntitiesUnion(first, second, analyser.getLineNumber(index)));
     }
 
 
@@ -58,18 +59,23 @@ public class InstructionsProcessor {
 
 
     void processIncrementLocal(int index, CurrentState state, CodeIterator iterator) {
-        var varIndex = analyser.parseNextBytes(iterator, index, 1);
-        if (state.isDerivative(varIndex)) {
-            state.updateVariable(varIndex, analyser.createEntitySuccessor(state.getVarValue(index), analyser.getLineNumber(index)));
+        var varIndex = parseNextBytes(iterator, index, 1);
+        if (state.isVariableDerivative(varIndex)) {
+            state.updateVariable(varIndex, analyser.createEntitySuccessor(state.getVariableValue(index), analyser.getLineNumber(index)));
         } else {
             state.updateVariable(varIndex, createNonDerivative());
         }
     }
 
+    void processLoadArrayElement(ArrayDeque<Entity> stack) {
+        var arrayIndex = stack.pop();
+        var valueOnStack = stack.pop();
+        stack.push(valueOnStack);
+    }
 
     void processCreateArray(int index, ArrayDeque<Entity> stack, CodeIterator iterator) {
         var count = stack.pop();
-        var typeRef = analyser.parseNextBytes(iterator, index, 2);
+        var typeRef = parseNextBytes(iterator, index, 2);
         if (count.isDerivativeSet()) {
             stack.push(analyser.createEntitySuccessor(count, analyser.getLineNumber(index)));
         } else {
@@ -78,12 +84,12 @@ public class InstructionsProcessor {
     }
 
 
-    void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int varNumber) {
+    void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int variableNumber) {
         var valueOnStack = stack.pop();
         if (valueOnStack.isDerivativeSet()) {
-            state.updateVariable(varNumber, analyser.createEntitySuccessor(valueOnStack, analyser.getLineNumber(index)));
+            state.updateVariable(variableNumber, analyser.createEntitySuccessor(valueOnStack, analyser.getLineNumber(index)));
         } else {
-            state.updateVariable(varNumber, valueOnStack);
+            state.updateVariable(variableNumber, valueOnStack);
         }
     }
 
@@ -94,17 +100,18 @@ public class InstructionsProcessor {
     void processPutStatic(int indexInConstPool, Entity entity, CurrentState state, int line) {
         StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
 
-        analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getLoadedClasses(), state.getInitialisedClasses());
+        analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getJvmState());
 
-        state.getInitialisedClasses().get(fieldInfo.className).put(fieldInfo.name, analyser.createEntitySuccessor(entity, line));
+        MyClass myClass = new MyClass(fieldInfo.className);
+        state.getJvmState().addClassStaticField(myClass, fieldInfo.name, analyser.createEntitySuccessor(entity, line));
     }
 
     Entity processGetStatic(int indexInConstPool, CurrentState state) {
         StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
 
-        analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getLoadedClasses(), state.getInitialisedClasses());
+        analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getJvmState());
 
-        return state.getInitialisedClasses().get(fieldInfo.className).get(fieldInfo.name);
+        return state.getJvmState().getStaticField(new MyClass(fieldInfo.className), fieldInfo.name);
 
     }
 
@@ -116,7 +123,7 @@ public class InstructionsProcessor {
                 objectRef.setToDerivative();
                 objectRef.setDerivativeSet(analyser.createEntitySuccessor(value, analyser.getLineNumber(index)).getDerivativeSet());
             } else {
-                objectRef.setDerivativeSet(analyser.createMergedDerivativeSet(value, objectRef, analyser.getLineNumber(index)).getDerivativeSet());
+                objectRef.setDerivativeSet(analyser.createDerivativeSetsUnion(value, objectRef, analyser.getLineNumber(index)).getDerivativeSet());
             }
 
         }
@@ -189,7 +196,7 @@ public class InstructionsProcessor {
 
             }
 
-            CurrentState resultState = analyser.mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, state.getLoadedClasses(), state.getInitialisedClasses(), objectRef);
+            CurrentState resultState = analyser.mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, objectRef, state.getJvmState());
 
             var result = resultState.getReturnState();
             result.ifPresent(stack::push);
@@ -199,5 +206,15 @@ public class InstructionsProcessor {
             throw new RuntimeException(e);
         }
 
+    }
+
+
+    static int parseNextBytes(CodeIterator iterator, int index, int bytesNumber) {
+        int result = 0;
+        for (int i = 0; i < bytesNumber; i++) {
+            int indexbyte = (iterator.byteAt(i + index + 1) & 0xff);
+            result = result | (indexbyte << (bytesNumber - i - 1) * 8);
+        }
+        return result;
     }
 }
