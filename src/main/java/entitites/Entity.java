@@ -2,6 +2,7 @@ package entitites;
 
 import entitites.derivatives.Derivative;
 
+import javax.swing.border.EtchedBorder;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -30,14 +31,21 @@ public class Entity {
     }
 
     Type type;
-
-
     Set<Derivative> derivativeSet = new HashSet<>();
+    Set<String> classNameSet = new HashSet<>();
+
 
 //    int varNumber;
 
     public Entity(Type type) {
         this.type = type;
+//        classNameSet.add(className);
+    }
+
+
+    public Entity(Type type, String className) {
+        this.type = type;
+        this.classNameSet.add(className);
     }
 
     public Entity(Type type, Derivative... derivatives) {
@@ -45,10 +53,13 @@ public class Entity {
         derivativeSet.addAll(List.of(derivatives));
     }
 
-    public Entity(Type type, Set<Derivative> derivativeSet1, Set<Derivative> derivativeSet2) {
+    public Entity(Type type,  Entity entity1, Entity entity2) {
         this.type = type;
-        derivativeSet.addAll(derivativeSet1);
-        derivativeSet.addAll(derivativeSet2);
+        derivativeSet.addAll(entity1.derivativeSet);
+        derivativeSet.addAll(entity2.derivativeSet);
+
+        classNameSet.addAll(entity1.classNameSet);
+        classNameSet.addAll(entity2.classNameSet);
     }
 
 
@@ -57,6 +68,14 @@ public class Entity {
             return null;
         }
         return derivativeSet;
+    }
+
+    public Set<String> getClassNameSet() {
+        return classNameSet;
+    }
+
+    public void addClassNames(Set<String> classNameSet) {
+        this.classNameSet.addAll(classNameSet);
     }
 
     public void addDerivative(Derivative derivative) {

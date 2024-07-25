@@ -13,6 +13,7 @@ import output.JVMState;
 import output.MyClass;
 
 import java.util.*;
+import java.lang.String;
 
 import static analysis.InstructionsMatcher.*;
 import static analysis.InstructionsProcessor.parseNextBytes;
@@ -41,8 +42,6 @@ public class MethodAnalyser {
 
     JVMState startingJvmState;
     Map<Integer, String> startingDerivatives;
-    Set<String> startingLoadedClasses;
-    Map<String, Map<String, Entity>> startingInitializedClasses;
 
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
@@ -129,7 +128,7 @@ public class MethodAnalyser {
         } while (!previousState.equals(currentBlocksStates.get(endBlock)));
 
         var finalState = currentBlocksStates.get(endBlock);
-        logFinalState(finalState);
+//        logFinalState(finalState);
 
     }
 
@@ -158,15 +157,15 @@ public class MethodAnalyser {
 
     void analyseBasicBlock(int blockIndex) {
         logger.debug("Analysing block: {}", blockIndex);
-        CurrentState state;
+        CurrentState startingState;
         if (blockIndex == startBlock) {
-            state = getEmptyState(numOfVars, startingDerivatives, startingJvmState);
+            startingState = getEmptyState(numOfVars, startingDerivatives, startingJvmState);
         } else {
-            state = getStartingState(blockIndex);
+            startingState = getBlockStartingState(blockIndex);
         }
-        analyseCode(state, blockIndex);
+        analyseCode(startingState, blockIndex);
 
-        currentBlocksStates.put(blockIndex, state);
+        currentBlocksStates.put(blockIndex, startingState);
 
     }
 
@@ -196,11 +195,14 @@ public class MethodAnalyser {
             } else if (matchLoadVariable(name)) {
                 var varNumber = getNumberInOpCode(name);
                 stack.push(state.getVariableValue(varNumber));
-
             } else if (matchLoadArrayElem(name)) {
                 processor.processLoadArrayElement(stack);
 
-            } else if (matchBinOperation(name)) {
+            } else if (matchLoadLong(name)) {
+                var varNumber = parseNextBytes(iterator, index, 1);
+                stack.push(state.getVariableValue(varNumber));
+            }
+            else if (matchBinOperation(name)) {
                 processor.processBinOperation(index, stack);
 
             } else if (matchCreateArray(name)) {
@@ -212,11 +214,14 @@ public class MethodAnalyser {
             } else if (matchIncrementLocal(name)) {
                 processor.processIncrementLocal(index, state, iterator);
 
-            } else if (matchInvokeVirtual(name) | matchInvokeSpecial(name) | matchInvokeInterface(name)) {
+            } else if (matchInvokeVirtual(name) | matchInvokeSpecial(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
                 processor.processInvokeMethod(methodIndex, stack, state, false);
-
-            } else if (matchInvokeStatic(name)) {
+            } else if (matchInvokeInterface(name)) {
+                var methodIndex = parseNextBytes(iterator, index, 2);
+//                processor.processInvokeInterface(methodIndex, stack);
+            }
+            else if (matchInvokeStatic(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
                 processor.processInvokeMethod(methodIndex, stack, state, true);
             } else if (matchReturnVoid(name)) {
@@ -224,7 +229,6 @@ public class MethodAnalyser {
 
             } else if (matchReturnValue(name)) {
                 state.updateReturnState(stack.pop());
-
             } else if (matchGetField(name)) {
                 var objectRef = stack.pop();
                 stack.push(createEntitySuccessor(objectRef, getLineNumber(index)));
@@ -240,12 +244,22 @@ public class MethodAnalyser {
             } else if (matchGetArrayLength(name)) {
                 stack.push(createNonDerivative());
             } else if (matchNew(name)) {
+                int typeIndex = parseNextBytes(iterator, index, 2);
+                MethodInfo methodInfo = method.getMethodInfo();
+                ConstPool constPool = methodInfo.getConstPool();
+                String className = constPool.getClassInfo(typeIndex);
+                System.out.println(className);
+
                 stack.push(createNonDerivative());
             } else if (matchDuplicateValue(name)) {
                 stack.push(stack.getFirst());
             } else if (matchPop(name) | matchMonitor(name)) {
                 stack.pop();
-            } else if (matchIfWith2Arguments(name)) {
+            } else if (matchPop2(name)) {
+                stack.pop();
+                stack.pop();
+            }
+            else if (matchIfWith2Arguments(name)) {
                 stack.pop();
                 stack.pop();
             } else if (matchIfWith1Argument(name)) {
@@ -299,7 +313,7 @@ public class MethodAnalyser {
         return newValue;
     }
 
-    private CurrentState getStartingState(int blockIndex) {
+    private CurrentState getBlockStartingState(int blockIndex) {
         var block = methodCFG.get(blockIndex);
         int num = block.incomings();
         List<CurrentState> predecessors = new ArrayList<>();
@@ -376,24 +390,24 @@ public class MethodAnalyser {
     }
 
     private void mergeStacks(List<CurrentState> currentStates, CurrentState newCurrentState) {
-        int stackSize = currentStates.getFirst().getStack().size();
+        int stackSize = currentStates.stream().map(a -> a.getStack().size()).max(Integer::compare).get();
         if (stackSize == 0) {
             return;
         }
         Entity[] newStack = new Entity[stackSize];
 
         for (int i = 0; i < stackSize; i++) {
-            Entity newEntity = new Entity(Entity.Type.UNDEFINED);
-
+            newStack[i] = new Entity(Entity.Type.UNDEFINED);
             for (var state : currentStates) {
+                if (state.getStack().size() <= i) {
+                    continue;
+                }
                 Entity entity = state.getStack().toArray(Entity[]::new)[i];
-                newEntity = mergeTwoEntities(newEntity, entity);
+                newStack[i] = mergeTwoEntities(newStack[i], entity);
             }
-            newStack[i] = newEntity;
         }
         newCurrentState.updateStack(new ArrayDeque<>(Arrays.asList(newStack)));
     }
-
 
     void mergeVariables(List<CurrentState> currentStates, CurrentState newCurrentState) {
         for (int i = 0; i < numOfVars; i++) {
@@ -414,12 +428,15 @@ public class MethodAnalyser {
 
     Entity mergeTwoEntities(Entity first, Entity second) {
         if (first.compareType(second) > 0) {
+            first.addClassNames(second.getClassNameSet());
             return first;
         } else if (first.compareType(second) < 0) {
+            second.addClassNames(first.getClassNameSet());
             return second;
         } else if (first.compareType(second) == 0 && first.isDerivativeSet()) {
-            return new Entity(Entity.Type.DERIVATIVE_SET, first.getDerivativeSet(), second.getDerivativeSet());
+            return new Entity(Entity.Type.DERIVATIVE_SET, first, second);
         } else {
+            first.addClassNames(second.getClassNameSet());
             return first;
         }
 

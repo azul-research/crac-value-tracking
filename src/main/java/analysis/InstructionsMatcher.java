@@ -20,7 +20,10 @@ public class InstructionsMatcher {
     }
 
     static boolean matchByteLoad(String opcode) {
-        return opcode.equals("bipush");
+        String regex = "([sb])ipush";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(opcode);
+        return matcher.matches();
     }
 
     public static boolean matchConstLoadFromPool(String opcode) {
@@ -71,6 +74,10 @@ public class InstructionsMatcher {
 
     static boolean matchLoadArrayElem(String opcode) {
         return opcode.equals("aaload");
+    }
+
+    static boolean matchLoadLong(String opcode) {
+        return opcode.equals("lload");
     }
 
     public static boolean matchGoto(String opcode) {
@@ -140,6 +147,10 @@ public class InstructionsMatcher {
 
     public static boolean matchPop(String opcode) {
         return opcode.equals("pop");
+    }
+
+    public static boolean matchPop2(String opcode) {
+        return opcode.equals("pop2");
     }
 
     public static boolean matchMonitor(String opcode) {

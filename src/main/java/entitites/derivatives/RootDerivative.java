@@ -8,6 +8,7 @@ public class RootDerivative extends Derivative {
     public RootDerivative(String name) {
         super();
         this.name = name;
+//        this.methodName = methodName;
     }
 
     public String getName() {

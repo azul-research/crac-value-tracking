@@ -1,0 +1,47 @@
+{
+  "loadedClasses": [
+    "examples.printexample.Main",
+    "java.lang.Object"
+  ],
+  "initialisedClasses": [
+    "examples.printexample.Main",
+    "java.lang.Object"
+  ],
+  "staticFields": {
+    "output.MyClass@b996a8a5": {
+      "myClass": {
+        "fullName": "examples.printexample.Main"
+      },
+      "staticFields": {}
+    },
+    "output.MyClass@3f697993": {
+      "myClass": {
+        "fullName": "java.lang.Object"
+      },
+      "staticFields": {}
+    }
+  },
+  "variablesArray": [
+    {
+      "type": "DERIVATIVE_SET",
+      "derivative from any of this": [
+        {
+          "root derivative": "args"
+        }
+      ]
+    },
+    {
+      "type": "DERIVATIVE_SET",
+      "derivative from any of this": [
+        {
+          "line": 8,
+          "derivative from": [
+            {
+              "root derivative": "args"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

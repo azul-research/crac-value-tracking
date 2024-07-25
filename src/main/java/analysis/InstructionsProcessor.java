@@ -91,6 +91,30 @@ public class InstructionsProcessor {
         }
     }
 
+    public void processInvokeInterface(int index, ArrayDeque<Entity> stack) {
+        try {
+
+            var constPool = method.getDeclaringClass().getClassFile().getConstPool();
+            int methodRefIndex = constPool.getMethodrefClass(index);
+            String className = constPool.getClassInfo(methodRefIndex);
+            String methodName = constPool.getMethodrefName(index);
+            String methodDescriptor = constPool.getMethodrefType(index);
+            logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
+
+            int numberOfArguments = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool()).length;
+
+            List<Integer> derivativeArgs;
+
+            derivativeArgs = getNonstaticMethodArguments(numberOfArguments, stack);
+           var  objectRef = Optional.of(stack.pop());
+            System.out.println(objectRef.get().getClassNameSet());
+
+        } catch (NotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
     record StaticFieldInfo(String className, String name) {
     }
 
@@ -123,9 +147,7 @@ public class InstructionsProcessor {
             } else {
                 objectRef.setDerivativeSet(analyser.createDerivativeSetsUnion(value, objectRef, analyser.getLineNumber(index)).getDerivativeSet());
             }
-
         }
-
     }
 
 
@@ -191,7 +213,6 @@ public class InstructionsProcessor {
                 if (objectRef.get().isDerivativeSet()) {
                     derivativeArgs.add(0);
                 }
-
             }
 
             CurrentState resultState = analyser.mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, objectRef, state.getJvmState());

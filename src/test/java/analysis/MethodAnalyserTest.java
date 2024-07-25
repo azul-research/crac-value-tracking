@@ -9,9 +9,7 @@ import output.ClassStaticFields;
 import output.CurrentState;
 import output.MyClass;
 
-
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -111,6 +109,10 @@ public class MethodAnalyserTest {
         expectedInitialisedClasses.get(myClassBase).addStaticField("field", fieldEntity);
 
         assertEquals(expectedInitialisedClasses, result.getInitialisedClasses());
+    }
+
+    @Test
+    public void analysisWithManyClasses() {
 
     }
 
