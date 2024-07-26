@@ -1,13 +1,11 @@
 package analysis;
 
 import entitites.Entity;
+import entitites.derivatives.RootDerivative;
 import input.ControlFlowGraph;
 import javassist.*;
 import javassist.bytecode.analysis.ControlFlow;
-import output.ClassStaticFields;
-import output.CurrentState;
-import output.JVMState;
-import output.MyClass;
+import output.*;
 
 import java.util.*;
 
@@ -33,11 +31,24 @@ public class Analyser {
     }
 
 
-    public CurrentState analyseMethod(String className, String methodName, List<Integer> derivativeArgs, String desc, Optional<Entity> currentObject, JVMState jvmState) {
-        prepareClass(className, jvmState);
+    public CurrentState analyseMethod(String className, String methodName, Map<Integer, Entity> derivativeArgs, String desc, Optional<Entity> currentObject, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
+        var myClass = prepareClass(className, jvmState);
 
         var methodCFG = controlFlowGraph.getMethodCFG(className, methodName, desc);
         var method = controlFlowGraph.getBehavior(className, methodName, desc);
+
+
+        var myMethod = new MyMethod(myClass, methodName, desc);
+
+        if (stacktrace.contains(myMethod)) {
+            var result = CurrentState.getEmptyState(0, Map.of(), jvmState);
+            if (!method.getMethodInfo().getDescriptor().endsWith("V")) {
+                result.updateReturnState(new Entity(Entity.Type.UNDEFINED));
+            }
+            return result;
+        }
+
+        stacktrace.push(myMethod);
 
         if (Modifier.isNative(method.getModifiers())) {
             var nativeMethodState = CurrentState.getEmptyState(0, Map.of(), jvmState);
@@ -46,8 +57,11 @@ public class Analyser {
             }
             return nativeMethodState;
         }
-        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, jvmState);
+
+        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, jvmState, stacktrace);
         analyser.analyse();
+
+        stacktrace.pop();
 
         return analyser.getAnalysisResult();
     }
@@ -57,7 +71,7 @@ public class Analyser {
         return STANDARD_LIB_CLASSES.contains(className);
     }
 
-    public void prepareClass(String className, JVMState jvmState) {
+    public MyClass prepareClass(String className, JVMState jvmState) {
 //        if (classFromStandardLib(className)) {
 //            return;
 //        }
@@ -70,12 +84,16 @@ public class Analyser {
         if (!jvmState.containsInitializedClass(myClass)) {
             initialiseClass(myClass, jvmState);
         }
+
+        return myClass;
     }
 
 
     public CurrentState analyseProgram() {
         var jvmState = new JVMState();
-        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, List.of(0), MAIN_FUNCTION_DESC, Optional.empty(), jvmState);
+
+        ArrayDeque<MyMethod> stacktrace = new ArrayDeque<>();
+        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, Map.of(0, new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative("args"))), MAIN_FUNCTION_DESC, Optional.empty(), jvmState, stacktrace);
     }
 
 
@@ -134,7 +152,7 @@ public class Analyser {
             return;
         }
 
-        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, List.of(), this, Optional.empty(), jvmState);
+        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, Map.of(), this, Optional.empty(), jvmState, new ArrayDeque<>());
         analyser.analyse();
         CurrentState result = analyser.getAnalysisResult();
 

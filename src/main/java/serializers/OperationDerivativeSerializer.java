@@ -12,8 +12,9 @@ public class OperationDerivativeSerializer extends JsonSerializer<OperationDeriv
     public void serialize(OperationDerivative operationDerivative, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
         try {
             jsonGenerator.writeStartObject();
+            jsonGenerator.writeObjectField("fileName", operationDerivative.getFileName());
             jsonGenerator.writeObjectField("line", operationDerivative.getLine());
-            jsonGenerator.writeObjectField("derivative from", operationDerivative.getPredecessors());
+            jsonGenerator.writeObjectField("from", operationDerivative.getPredecessors());
 //        jsonGenerator.writeStringField("methodName", rootDerivative.methodName);
             jsonGenerator.writeEndObject();
 

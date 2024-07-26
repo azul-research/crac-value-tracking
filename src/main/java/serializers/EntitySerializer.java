@@ -11,13 +11,17 @@ public class EntitySerializer extends JsonSerializer<Entity> {
     @Override
     public void serialize(Entity entity, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
         try {
-            jsonGenerator.writeStartObject();
-            jsonGenerator.writeObjectField("type", entity.getType());
+//            jsonGenerator.writeStartObject();
+//            jsonGenerator.writeObjectField("type", entity.getType());
 
             if (entity.isDerivativeSet()) {
-                jsonGenerator.writeObjectField("derivative from any of this", entity.getDerivativeSet());
+                jsonGenerator.writeObject(entity.getDerivativeSet());
             }
-            jsonGenerator.writeEndObject();
+            else {
+                jsonGenerator.writeString("NON_DERIVATIVE");
+            }
+
+//            jsonGenerator.writeEndObject();
 
         } catch (IOException e) {
             throw new RuntimeException(e);

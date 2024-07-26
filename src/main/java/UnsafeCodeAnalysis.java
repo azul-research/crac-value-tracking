@@ -4,11 +4,9 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import entitites.Entity;
 import entitites.derivatives.OperationDerivative;
 import entitites.derivatives.RootDerivative;
-import serializers.EntitySerializer;
-import serializers.OperationDerivativeSerializer;
-import serializers.RootDerivativeSerializer;
+import output.ClassStaticFields;
+import serializers.*;
 import output.CurrentState;
-import serializers.CurrentStateSerializer;
 
 
 import java.io.File;
@@ -49,11 +47,12 @@ public class UnsafeCodeAnalysis {
         module.addSerializer(OperationDerivative.class, new OperationDerivativeSerializer());
         module.addSerializer(CurrentState.class, new CurrentStateSerializer());
         module.addSerializer(Entity.class, new EntitySerializer());
+        module.addSerializer(ClassStaticFields.class, new ClassStaticFieldsSerializer());
         mapper.registerModule(module);
 
         try {
             mapper.writeValue(new File(fileName), result);
-            System.out.println("JSON file created: currentState.json");
+            System.out.println("JSON file created: " + fileName);
 
 
         } catch (IOException e) {

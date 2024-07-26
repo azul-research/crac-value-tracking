@@ -79,14 +79,11 @@ public class CurrentState {
         return variablesArray[var].isDerivativeSet();
     }
 
-    public static CurrentState getEmptyState(int numberOfVars, Map<Integer, String> derivatives, JVMState jvmState) {
+    public static CurrentState getEmptyState(int numberOfVars, Map<Integer, Entity> derivatives, JVMState jvmState) {
         Entity[] localVariables = new Entity[numberOfVars];
-        for (int i = 0; i < numberOfVars; i++) {
-            if (derivatives.containsKey(i)) {
-                localVariables[i] = new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative(derivatives.get(i)));
-            } else {
-                localVariables[i] = new Entity(Entity.Type.UNDEFINED);
-            }
+        Arrays.fill(localVariables, new Entity(Entity.Type.UNDEFINED));
+        for (var number: derivatives.keySet()) {
+            localVariables[number] = derivatives.get(number);
         }
         return new CurrentState(localVariables, new ArrayDeque<>(), Optional.empty(), jvmState);
     }

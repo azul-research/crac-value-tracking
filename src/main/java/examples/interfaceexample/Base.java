@@ -4,6 +4,7 @@ public interface Base {
 
 
     static String function(String[] arr) {
-        return arr[0];
+        String b = arr[0];
+        return b;
     }
 }

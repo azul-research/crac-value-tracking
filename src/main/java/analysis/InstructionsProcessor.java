@@ -11,11 +11,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import output.CurrentState;
 import output.MyClass;
+import output.MyMethod;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static entitites.Entity.createNonDerivative;
 
@@ -48,7 +46,7 @@ public class InstructionsProcessor {
             if (arrayRef.isNonDerivative()) {
                 arrayRef.setToDerivative();
                 for (var derivative : value.getDerivativeSet()) {
-                    arrayRef.addDerivative(new OperationDerivative(analyser.getLineNumber(index), derivative));
+                    arrayRef.addDerivative(new OperationDerivative(analyser.getLineNumber(index), analyser.fileName, derivative));
                 }
             }
         }
@@ -103,7 +101,7 @@ public class InstructionsProcessor {
 
             int numberOfArguments = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool()).length;
 
-            List<Integer> derivativeArgs;
+            Map<Integer, Entity> derivativeArgs;
 
             derivativeArgs = getNonstaticMethodArguments(numberOfArguments, stack);
            var  objectRef = Optional.of(stack.pop());
@@ -167,23 +165,19 @@ public class InstructionsProcessor {
     }
 
 
-    private List<Integer> getStaticMethodArguments(int numberOfArguments, ArrayDeque<Entity> stack) {
-        List<Integer> derivativeArgs = new ArrayList<>();
+    private Map<Integer, Entity> getStaticMethodArguments(int numberOfArguments, ArrayDeque<Entity> stack) {
+        Map<Integer, Entity> derivativeArgs = new HashMap<>();
         for (int i = numberOfArguments - 1; i >= 0; i--) {
-            if (stack.pop().isDerivativeSet()) {
-                derivativeArgs.add(i);
-            }
+            derivativeArgs.put(i, stack.pop());
         }
         return derivativeArgs;
     }
 
 
-    private List<Integer> getNonstaticMethodArguments(int numberOfArguments, ArrayDeque<Entity> stack) {
-        List<Integer> derivativeArgs = new ArrayList<>();
+    private Map<Integer, Entity> getNonstaticMethodArguments(int numberOfArguments, ArrayDeque<Entity> stack) {
+        Map<Integer, Entity> derivativeArgs = new HashMap<>();
         for (int i = numberOfArguments; i > 0; i--) {
-            if (stack.pop().isDerivativeSet()) {
-                derivativeArgs.add(i);
-            }
+            derivativeArgs.put(i, stack.pop());
         }
 
         return derivativeArgs;
@@ -201,7 +195,7 @@ public class InstructionsProcessor {
 
             int numberOfArguments = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool()).length;
 
-            List<Integer> derivativeArgs;
+            Map<Integer, Entity> derivativeArgs;
 
             Optional<Entity> objectRef = Optional.empty();
 
@@ -210,12 +204,13 @@ public class InstructionsProcessor {
             } else {
                 derivativeArgs = getNonstaticMethodArguments(numberOfArguments, stack);
                 objectRef = Optional.of(stack.pop());
-                if (objectRef.get().isDerivativeSet()) {
-                    derivativeArgs.add(0);
-                }
+                derivativeArgs.put(0, objectRef.get());
             }
 
-            CurrentState resultState = analyser.mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, objectRef, state.getJvmState());
+
+            CurrentState resultState = analyser.mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, objectRef, state.getJvmState(), analyser.stacktrace);
+
+
 
             var result = resultState.getReturnState();
             result.ifPresent(stack::push);

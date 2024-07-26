@@ -5,56 +5,61 @@ import java.util.regex.Pattern;
 
 public class InstructionsMatcher {
 
-    public static boolean matchIfWith2Arguments(String opCode) {
-        return opCode.startsWith("if_");
-    }
-    public static boolean matchIfWith1Argument(String opCode) {
-        return opCode.startsWith("if") && opCode.charAt(2) != '_';
+
+    private static boolean patternMatching(String patternString, String opcode) {
+        Pattern pattern = Pattern.compile(patternString);
+        Matcher matcher = pattern.matcher(opcode);
+        return matcher.matches();
     }
 
-    static boolean matchConstLoad(String opCode) {
-        String regex = ".const.*";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opCode);
-        return matcher.matches();
+    public static boolean matchIfWith2Arguments(String opcode) {
+        return opcode.startsWith("if_");
+    }
+    public static boolean matchIfWith1Argument(String opcode) {
+        return opcode.startsWith("if") && opcode.charAt(2) != '_';
+    }
+
+    static boolean matchConstLoad(String opcode) {
+        return patternMatching(".const.*", opcode);
     }
 
     static boolean matchByteLoad(String opcode) {
-        String regex = "([sb])ipush";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opcode);
-        return matcher.matches();
+        return patternMatching("([sb])ipush", opcode);
     }
 
     public static boolean matchConstLoadFromPool(String opcode) {
         return opcode.startsWith("ldc");
     }
 
-    static boolean matchStoreData(String opCode) {
-        String regex = ".store_(.*)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opCode);
-        return matcher.matches();
+    static boolean matchStoreData(String opcode) {
+        return patternMatching(".store_(.*)", opcode);
     }
 
-    static boolean matchStoreToVariable(String opCode) {
+    static boolean matchStoreToVariable(String opcode) {
         String regex = ".store";
         Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opCode);
+        Matcher matcher = pattern.matcher(opcode);
         return matcher.matches();
     }
 
-    static boolean matchLoadVariable(String opCode) {
+    static boolean matchLoadVariable(String opcode) {
         String regex = ".load_(.*)";
         Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opCode);
+        Matcher matcher = pattern.matcher(opcode);
         return matcher.matches();
     }
 
-    static boolean matchBinOperation(String opCode) {
+    static boolean matchLoadVariableWithoutIndex(String opcode) {
+        String regex = ".load";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(opcode);
+        return matcher.matches();
+    }
+
+    static boolean matchBinOperation(String opcode) {
         String regex = ".{1,2}(add|div|mul|sub|shr|shl|rem|or|xor)";
         Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opCode);
+        Matcher matcher = pattern.matcher(opcode);
         return matcher.matches();
     }
 
@@ -73,7 +78,10 @@ public class InstructionsMatcher {
     }
 
     static boolean matchLoadArrayElem(String opcode) {
-        return opcode.equals("aaload");
+        String regex = ".aload";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(opcode);
+        return matcher.matches();
     }
 
     static boolean matchLoadLong(String opcode) {
@@ -157,10 +165,14 @@ public class InstructionsMatcher {
         return opcode.startsWith("monitor");
     }
 
-    public static int getNumberInOpCode(String opCode) {
+    public static boolean matchTableSwitch(String opcode) {
+        return opcode.equals("tableswitch");
+    }
+
+    public static int getNumberInOpcode(String opcode) {
         String regex = ".*_(.*)";
         Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opCode);
+        Matcher matcher = pattern.matcher(opcode);
         if (matcher.matches()) {
             return Integer.parseInt(matcher.group(1));
         }

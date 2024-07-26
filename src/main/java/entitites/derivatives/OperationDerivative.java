@@ -7,12 +7,18 @@ import java.util.Objects;
 public class OperationDerivative extends Derivative {
 
     Derivative[] predecessors;
+    String fileName;
 
     int line;
-    public OperationDerivative(int line, Derivative... predecessors) {
+    public OperationDerivative(int line, String fileName, Derivative... predecessors) {
         super();
         this.line = line;
+        this.fileName = fileName;
         this.predecessors = predecessors;
+    }
+
+    public String getFileName() {
+        return fileName;
     }
 
 

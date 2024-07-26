@@ -7,13 +7,11 @@ import javassist.bytecode.*;
 import javassist.bytecode.analysis.ControlFlow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import output.ClassStaticFields;
-import output.CurrentState;
-import output.JVMState;
-import output.MyClass;
+import output.*;
 
 import java.util.*;
 import java.lang.String;
+import java.util.List;
 
 import static analysis.InstructionsMatcher.*;
 import static analysis.InstructionsProcessor.parseNextBytes;
@@ -39,13 +37,15 @@ public class MethodAnalyser {
 
     Analyser mainAnalyser;
     CtBehavior method;
+    ArrayDeque<MyMethod> stacktrace;
 
     JVMState startingJvmState;
-    Map<Integer, String> startingDerivatives;
+    Map<Integer, Entity> startingDerivatives;
 
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
-    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, List<Integer> derivativeVars, Analyser mainAnalyser, Optional<Entity> thisObject, JVMState jvmState) {
+    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, Map<Integer, Entity> derivativeVars, Analyser mainAnalyser, Optional<Entity> thisObject, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
+        this.stacktrace = stacktrace;
 
         this.thisObj = thisObject;
         this.mainAnalyser = mainAnalyser;
@@ -103,22 +103,24 @@ public class MethodAnalyser {
         }
     }
 
-    private void setCurrentBlocksStates(int numOfVars, Map<Integer, String> derivativeVars, JVMState jvmState) {
+    private void setCurrentBlocksStates(int numOfVars, Map<Integer, Entity> derivativeVars, JVMState jvmState) {
         currentBlocksStates = new HashMap<>();
         for (var index : methodCFG.keySet()) {
             currentBlocksStates.put(index, getEmptyState(numOfVars, derivativeVars, jvmState));
         }
     }
 
-    private void setStartingDerivatives(List<Integer> derivativeVar) {
-        this.startingDerivatives = new HashMap<>();
-        for (var derivative : derivativeVar) {
-            startingDerivatives.put(derivative, getVarName(derivative));
-        }
+    private void setStartingDerivatives(Map<Integer, Entity> derivativeVars) {
+        this.startingDerivatives = new HashMap<>(derivativeVars);
+
     }
 
     public void analyse() {
         logger.debug("Analysing method: {}", method.getName());
+        logger.debug("Control flow graph:");
+        for (var bl : methodCFG.keySet().stream().sorted().toArray(Integer[]::new)) {
+            logger.debug(methodCFG.get(bl));
+        }
         analyseAllBlocks();
 
         CurrentState previousState;
@@ -171,7 +173,8 @@ public class MethodAnalyser {
 
     void analyseCode(CurrentState state, int blockIndex) {
         int blockEnd = methodCFG.get(blockIndex).length() + blockIndex;
-        var iterator = codeAttribute.iterator();
+        var iterator = new MyCodeIterator(codeAttribute);
+        byte[] code = codeAttribute.getCode();
         int index = blockIndex;
 
         ArrayDeque<Entity> stack = state.getStack();
@@ -185,7 +188,7 @@ public class MethodAnalyser {
                 stack.push(createNonDerivative());
 
             } else if (matchStoreData(name)) {
-                var varNumber = getNumberInOpCode(name);
+                var varNumber = getNumberInOpcode(name);
                 processor.processDataStore(index, stack, state, varNumber);
 
             } else if (matchStoreToVariable(name)) {
@@ -193,9 +196,13 @@ public class MethodAnalyser {
                 processor.processDataStore(index, stack, state, varNumber);
 
             } else if (matchLoadVariable(name)) {
-                var varNumber = getNumberInOpCode(name);
+                var varNumber = getNumberInOpcode(name);
                 stack.push(state.getVariableValue(varNumber));
-            } else if (matchLoadArrayElem(name)) {
+            } else if (matchLoadVariableWithoutIndex(name)) {
+                var variableNumber = parseNextBytes(iterator, index, 1);
+                stack.push(state.getVariableValue(variableNumber));
+            }
+            else if (matchLoadArrayElem(name)) {
                 processor.processLoadArrayElement(stack);
 
             } else if (matchLoadLong(name)) {
@@ -257,19 +264,24 @@ public class MethodAnalyser {
                 stack.pop();
             } else if (matchPop2(name)) {
                 stack.pop();
-                stack.pop();
+                if (!stack.isEmpty()) {
+                    stack.pop();
+                }
             }
             else if (matchIfWith2Arguments(name)) {
                 stack.pop();
                 stack.pop();
             } else if (matchIfWith1Argument(name)) {
                 stack.pop();
+            } else if (matchTableSwitch(name)) {
+                stack.pop();
             }
+
             else if (!matchGoto(name)) {
                 logger.warn("UNKNOWN OPCODE: {}", name);
             }
 
-            index += opcodeLength[opcode];
+            index = iterator.myNextOpcode(code, index);
 
         }
     }
@@ -295,7 +307,7 @@ public class MethodAnalyser {
 
         for (var pred1 : first.getDerivativeSet()) {
             for (var pred2 : second.getDerivativeSet()) {
-                result.addDerivative(new OperationDerivative(codeLine, pred1, pred2));
+                result.addDerivative(new OperationDerivative(codeLine, fileName, pred1, pred2));
             }
         }
         return result;
@@ -308,7 +320,7 @@ public class MethodAnalyser {
         Entity newValue = new Entity(Entity.Type.DERIVATIVE_SET);
 
         for (var pred : oldValue.getDerivativeSet()) {
-            newValue.addDerivative(new OperationDerivative(line, pred));
+            newValue.addDerivative(new OperationDerivative(line, fileName, pred));
         }
         return newValue;
     }

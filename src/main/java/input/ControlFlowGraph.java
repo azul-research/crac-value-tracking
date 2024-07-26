@@ -8,7 +8,6 @@ import java.util.*;
 
 public class ControlFlowGraph {
 
-
     private static final String CONSTRUCTOR_NAME = "<init>";
 
     private ClassPool pool;
