@@ -78,7 +78,15 @@ public class MethodAnalyser {
 
     String getVarName(int i) {
         var attribute = (LocalVariableAttribute) codeAttribute.getAttribute(LocalVariableAttribute.tag);
-        return attribute.variableNameByIndex(i);
+        var attribute2 = (LocalVariableAttribute) codeAttribute.getAttribute(LocalVariableAttribute.tag);
+        System.out.println(attribute2.tableLength());
+        return attribute2.variableName(i);
+    }
+
+    int getLocalsNumber() {
+        var attribute = (LocalVariableAttribute) codeAttribute.getAttribute(LocalVariableAttribute.tag);
+        return attribute.tableLength();
+
     }
 
     Integer getLineNumber(int i) { // i - number of bytecode instruction in method
@@ -201,15 +209,9 @@ public class MethodAnalyser {
             } else if (matchLoadVariableWithoutIndex(name)) {
                 var variableNumber = parseNextBytes(iterator, index, 1);
                 stack.push(state.getVariableValue(variableNumber));
-            }
-            else if (matchLoadArrayElem(name)) {
+            } else if (matchLoadArrayElem(name)) {
                 processor.processLoadArrayElement(stack);
-
-            } else if (matchLoadLong(name)) {
-                var varNumber = parseNextBytes(iterator, index, 1);
-                stack.push(state.getVariableValue(varNumber));
-            }
-            else if (matchBinOperation(name)) {
+            } else if (matchBinOperation(name)) {
                 processor.processBinOperation(index, stack);
 
             } else if (matchCreateArray(name)) {
@@ -227,13 +229,11 @@ public class MethodAnalyser {
             } else if (matchInvokeInterface(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
 //                processor.processInvokeInterface(methodIndex, stack);
-            }
-            else if (matchInvokeStatic(name)) {
+            } else if (matchInvokeStatic(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
                 processor.processInvokeMethod(methodIndex, stack, state, true);
             } else if (matchReturnVoid(name)) {
                 state.setEmptyReturn();
-
             } else if (matchReturnValue(name)) {
                 state.updateReturnState(stack.pop());
             } else if (matchGetField(name)) {
@@ -251,13 +251,7 @@ public class MethodAnalyser {
             } else if (matchGetArrayLength(name)) {
                 stack.push(createNonDerivative());
             } else if (matchNew(name)) {
-                int typeIndex = parseNextBytes(iterator, index, 2);
-                MethodInfo methodInfo = method.getMethodInfo();
-                ConstPool constPool = methodInfo.getConstPool();
-                String className = constPool.getClassInfo(typeIndex);
-                System.out.println(className);
-
-                stack.push(createNonDerivative());
+                processor.processNew(iterator, index, stack);
             } else if (matchDuplicateValue(name)) {
                 stack.push(stack.getFirst());
             } else if (matchPop(name) | matchMonitor(name)) {
@@ -267,17 +261,20 @@ public class MethodAnalyser {
                 if (!stack.isEmpty()) {
                     stack.pop();
                 }
-            }
-            else if (matchIfWith2Arguments(name)) {
+            } else if (matchIfWith2Arguments(name)) {
                 stack.pop();
                 stack.pop();
             } else if (matchIfWith1Argument(name)) {
                 stack.pop();
             } else if (matchTableSwitch(name)) {
                 stack.pop();
-            }
-
-            else if (!matchGoto(name)) {
+            } else if (matchThrowError(name)) {
+                var objectRef = stack.pop();
+                stack.clear();
+                stack.push(objectRef);
+            } else if (matchSwap(name)) {
+                processor.processSwap(stack);
+            } else if (!matchGoto(name) && !matchConvertValue(name)) {
                 logger.warn("UNKNOWN OPCODE: {}", name);
             }
 

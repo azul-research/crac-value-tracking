@@ -7,6 +7,7 @@ import javassist.NotFoundException;
 import javassist.bytecode.CodeIterator;
 import javassist.bytecode.ConstPool;
 import javassist.bytecode.Descriptor;
+import javassist.bytecode.MethodInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import output.CurrentState;
@@ -79,6 +80,13 @@ public class InstructionsProcessor {
         }
     }
 
+    void processSwap(ArrayDeque<Entity> stack) {
+        var first = stack.pop();
+        var second = stack.pop();
+        stack.push(first);
+        stack.push(second);
+    }
+
 
     void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int variableNumber) {
         var valueOnStack = stack.pop();
@@ -111,6 +119,15 @@ public class InstructionsProcessor {
             throw new RuntimeException(e);
         }
 
+    }
+
+    public void processNew(CodeIterator iterator, int index, ArrayDeque<Entity> stack) {
+        int typeIndex = parseNextBytes(iterator, index, 2);
+        MethodInfo methodInfo = method.getMethodInfo();
+        ConstPool constPool = methodInfo.getConstPool();
+        String className = constPool.getClassInfo(typeIndex);
+        System.out.println(className);
+        stack.push(createNonDerivative());
     }
 
     record StaticFieldInfo(String className, String name) {

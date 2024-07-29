@@ -36,56 +36,31 @@ public class InstructionsMatcher {
     }
 
     static boolean matchStoreToVariable(String opcode) {
-        String regex = ".store";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opcode);
-        return matcher.matches();
+        return patternMatching(".store", opcode);
     }
 
     static boolean matchLoadVariable(String opcode) {
-        String regex = ".load_(.*)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opcode);
-        return matcher.matches();
+        return patternMatching(".load_(.*)", opcode);
     }
 
     static boolean matchLoadVariableWithoutIndex(String opcode) {
-        String regex = ".load";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opcode);
-        return matcher.matches();
+        return patternMatching(".load", opcode);
     }
 
     static boolean matchBinOperation(String opcode) {
-        String regex = ".{1,2}(add|div|mul|sub|shr|shl|rem|or|xor)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opcode);
-        return matcher.matches();
+        return patternMatching(".{1,2}(add|div|mul|sub|shr|shl|rem|or|xor|and)", opcode);
     }
 
     public static boolean matchStoreToArray(String opcode) {
-        String regex = ".astore";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opcode);
-        return matcher.matches();
+        return patternMatching(".astore", opcode);
     }
 
     public static boolean matchReturnValue(String opcode) {
-        String regex = ".return";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opcode);
-        return matcher.matches();
+        return patternMatching(".return", opcode);
     }
 
     static boolean matchLoadArrayElem(String opcode) {
-        String regex = ".aload";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(opcode);
-        return matcher.matches();
-    }
-
-    static boolean matchLoadLong(String opcode) {
-        return opcode.equals("lload");
+        return patternMatching(".aload", opcode);
     }
 
     public static boolean matchGoto(String opcode) {
@@ -167,6 +142,18 @@ public class InstructionsMatcher {
 
     public static boolean matchTableSwitch(String opcode) {
         return opcode.equals("tableswitch");
+    }
+
+    public static boolean matchThrowError(String opcode) {
+        return opcode.equals("athrow");
+    }
+
+    public static boolean matchConvertValue(String opcode) {
+        return patternMatching(".2.", opcode);
+    }
+
+    public static boolean matchSwap(String opcode) {
+        return opcode.equals("swap");
     }
 
     public static int getNumberInOpcode(String opcode) {

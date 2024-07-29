@@ -18,7 +18,10 @@ public class Analyser {
     static final String MAIN_FUNCTION_NAME = "main";
 
 
-    static final Set<String> STANDARD_LIB_CLASSES = Set.of("java.lang.String", "java.lang.ClassLoader", "java.lang.Object");
+    static final Set<String> STANDARD_LIB_CLASSES = Set.of(
+//            "java.lang.String",
+            "java.lang.ClassLoader",
+            "java.lang.Object");
 
     ControlFlowGraph controlFlowGraph;
     String programJarPath;
@@ -72,11 +75,13 @@ public class Analyser {
     }
 
     public MyClass prepareClass(String className, JVMState jvmState) {
-//        if (classFromStandardLib(className)) {
-//            return;
-//        }
 
         MyClass myClass = new MyClass(className);
+
+        if (classFromStandardLib(className)) {
+            return myClass;
+        }
+
         if (!jvmState.containsLoadedClass(myClass)) {
             jvmState.addLoadedClass(myClass);
         }
