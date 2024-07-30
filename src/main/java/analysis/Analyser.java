@@ -40,26 +40,17 @@ public class Analyser {
         var methodCFG = controlFlowGraph.getMethodCFG(className, methodName, desc);
         var method = controlFlowGraph.getBehavior(className, methodName, desc);
 
-
         var myMethod = new MyMethod(myClass, methodName, desc);
 
         if (stacktrace.contains(myMethod)) {
-            var result = CurrentState.getEmptyState(0, Map.of(), jvmState);
-            if (!method.getMethodInfo().getDescriptor().endsWith("V")) {
-                result.updateReturnState(new Entity(Entity.Type.UNDEFINED));
-            }
-            return result;
+            return methodEmptyState(method, jvmState);
+        }
+
+        if (Modifier.isNative(method.getModifiers())) {
+            return methodEmptyState(method, jvmState);
         }
 
         stacktrace.push(myMethod);
-
-        if (Modifier.isNative(method.getModifiers())) {
-            var nativeMethodState = CurrentState.getEmptyState(0, Map.of(), jvmState);
-            if (!method.getMethodInfo().getDescriptor().endsWith("V")) {
-                nativeMethodState.updateReturnState(new Entity(Entity.Type.NON_DERIVATIVE));
-            }
-            return nativeMethodState;
-        }
 
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, jvmState, stacktrace);
         analyser.analyse();
@@ -67,6 +58,14 @@ public class Analyser {
         stacktrace.pop();
 
         return analyser.getAnalysisResult();
+    }
+
+    CurrentState methodEmptyState(CtBehavior method, JVMState jvmState) {
+        var result = CurrentState.getEmptyState(0, Map.of(), jvmState);
+        if (!method.getMethodInfo().getDescriptor().endsWith("V")) {
+            result.updateReturnState(new Entity(Entity.Type.UNDEFINED));
+        }
+        return result;
     }
 
 

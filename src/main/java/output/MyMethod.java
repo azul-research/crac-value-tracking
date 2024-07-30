@@ -19,7 +19,7 @@ public class MyMethod {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MyMethod myMethod = (MyMethod) o;
-        return Objects.equals(myClass, myMethod.myClass) && Objects.equals(methodName, myMethod.methodName) && Objects.equals(methodDescriptor, myMethod.methodDescriptor);
+        return myClass.equals(myMethod.myClass) && Objects.equals(methodName, myMethod.methodName) && Objects.equals(methodDescriptor, myMethod.methodDescriptor);
     }
 
     @Override

@@ -208,7 +208,7 @@ public class InstructionsProcessor {
             String className = constPool.getClassInfo(methodRefIndex);
             String methodName = constPool.getMethodrefName(index);
             String methodDescriptor = constPool.getMethodrefType(index);
-            logger.debug("class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
+//            logger.debug("Class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
 
             int numberOfArguments = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool()).length;
 

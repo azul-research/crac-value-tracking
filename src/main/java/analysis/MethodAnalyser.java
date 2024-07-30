@@ -60,7 +60,7 @@ public class MethodAnalyser {
         this.startBlock = Collections.min(this.methodCFG.keySet());
         this.endBlock = Collections.max(this.methodCFG.keySet());
 
-        logger.debug("Start block: {}, end block: {}", startBlock, endBlock);
+//        logger.debug("Start block: {}, end block: {}", startBlock, endBlock);
 
         this.numOfVars = codeAttribute.getMaxLocals();
         this.startingJvmState = jvmState;
@@ -68,7 +68,7 @@ public class MethodAnalyser {
 
         this.processor = new InstructionsProcessor(this, method);
 
-        logger.debug("Number of local variables: {}", numOfVars);
+//        logger.debug("Number of local variables: {}", numOfVars);
 
     }
 
@@ -124,11 +124,11 @@ public class MethodAnalyser {
     }
 
     public void analyse() {
-        logger.debug("Analysing method: {}", method.getName());
-        logger.debug("Control flow graph:");
-        for (var bl : methodCFG.keySet().stream().sorted().toArray(Integer[]::new)) {
-            logger.debug(methodCFG.get(bl));
-        }
+        logger.debug("Start analysis, method: {}, class name: {}", method.getName(), method.getDeclaringClass().getName());
+//        logger.debug("Control flow graph:");
+//        for (var bl : methodCFG.keySet().stream().sorted().toArray(Integer[]::new)) {
+//            logger.debug(methodCFG.get(bl));
+//        }
         analyseAllBlocks();
 
         CurrentState previousState;
@@ -139,6 +139,7 @@ public class MethodAnalyser {
 
         var finalState = currentBlocksStates.get(endBlock);
 //        logFinalState(finalState);
+        logger.debug("End analysis, method: {}, class name: {}", method.getName(), method.getDeclaringClass().getName());
 
     }
 
@@ -166,7 +167,7 @@ public class MethodAnalyser {
     }
 
     void analyseBasicBlock(int blockIndex) {
-        logger.debug("Analysing block: {}", blockIndex);
+//        logger.debug("Analysing block: {}", blockIndex);
         CurrentState startingState;
         if (blockIndex == startBlock) {
             startingState = getEmptyState(numOfVars, startingDerivatives, startingJvmState);
@@ -190,7 +191,7 @@ public class MethodAnalyser {
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
             String name = Mnemonic.OPCODE[opcode];
-            logger.debug("{}:{} instruction:{} {}", fileName, getLineNumber(index), index, name);
+//            logger.debug("{}:{} instruction:{} {}", fileName, getLineNumber(index), index, name);
 
             if (matchConstLoad(name) || matchConstLoadFromPool(name) || matchByteLoad(name)) {
                 stack.push(createNonDerivative());
@@ -229,7 +230,7 @@ public class MethodAnalyser {
             } else if (matchInvokeInterface(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
 //                processor.processInvokeInterface(methodIndex, stack);
-            } else if (matchInvokeStatic(name)) {
+            } else if (matchInvokeStatic(name) | matchInvokeDynamic(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
                 processor.processInvokeMethod(methodIndex, stack, state, true);
             } else if (matchReturnVoid(name)) {

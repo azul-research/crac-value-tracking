@@ -18,9 +18,12 @@ public class CurrentStateSerializer extends JsonSerializer<CurrentState> {
 
             var staticFields = currentState.getInitialisedClasses();
 
+            jsonGenerator.writeObjectFieldStart("classes");
+
             for (var myCLass : staticFields.keySet()) {
                 jsonGenerator.writeObjectField(myCLass.getFullName(), staticFields.get(myCLass));
             }
+            jsonGenerator.writeEndObject();
 
 //            jsonGenerator.writeObjectField("staticFields", currentState.getInitialisedClasses());
             jsonGenerator.writeObjectField("variablesArray", currentState.getVariablesArray());
