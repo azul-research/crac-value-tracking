@@ -24,7 +24,7 @@ public class UnsafeCodeAnalysis {
                     Not enough arguments:\s
                     first argument - path to .jar file,\s
                     second argument - full name of Main class,\s
-                    third argument - path to Java""");
+                    third argument - file name""");
             return;
         }
 
@@ -32,7 +32,7 @@ public class UnsafeCodeAnalysis {
 
         CurrentState result = analyser.analyseProgram();
 
-        saveToJson(result, "result1.json");
+        saveToJson(result, args[2]);
 
 //        analyseMethod(getSourceFile("java"), "java.lang.String", "contentEquals", List.of(0, 1));
 //        analyseMethod(args[0], args[1], "main", List.of(0));

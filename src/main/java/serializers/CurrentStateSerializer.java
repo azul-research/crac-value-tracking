@@ -18,7 +18,7 @@ public class CurrentStateSerializer extends JsonSerializer<CurrentState> {
 
             var staticFields = currentState.getInitialisedClasses();
 
-            jsonGenerator.writeObjectFieldStart("classes");
+            jsonGenerator.writeObjectFieldStart("static");
 
             for (var myCLass : staticFields.keySet()) {
                 jsonGenerator.writeObjectField(myCLass.getFullName(), staticFields.get(myCLass));
@@ -26,7 +26,7 @@ public class CurrentStateSerializer extends JsonSerializer<CurrentState> {
             jsonGenerator.writeEndObject();
 
 //            jsonGenerator.writeObjectField("staticFields", currentState.getInitialisedClasses());
-            jsonGenerator.writeObjectField("variablesArray", currentState.getVariablesArray());
+            jsonGenerator.writeObjectField("local", currentState.getVariablesArray());
             jsonGenerator.writeEndObject();
 
         } catch (IOException e) {

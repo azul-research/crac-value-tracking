@@ -18,7 +18,7 @@ public class EntitySerializer extends JsonSerializer<Entity> {
                 jsonGenerator.writeObject(entity.getDerivativeSet());
             }
             else {
-                jsonGenerator.writeString("NON_DERIVATIVE");
+                jsonGenerator.writeString("nonDerivative");
             }
 
 //            jsonGenerator.writeEndObject();
