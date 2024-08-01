@@ -30,7 +30,9 @@ public class MethodAnalyser {
 
     InstructionsProcessor processor;
     int startBlock;
-    int endBlock;
+    Set<Integer> endBlocks;
+    CurrentState finalState;
+
     int numOfVars;
     String fileName;
     Optional<Entity> thisObj;
@@ -58,7 +60,14 @@ public class MethodAnalyser {
 
         this.blocks = cfgBlocks;
         this.startBlock = Collections.min(this.methodCFG.keySet());
-        this.endBlock = Collections.max(this.methodCFG.keySet());
+
+        this.endBlocks = new HashSet<>();
+        for (var block : blocks) {
+            if (block.exits() == 0) {
+                this.endBlocks.add(block.position());
+            }
+        }
+//        this.endBlock = Collections.max(this.methodCFG.keySet());
 
 //        logger.debug("Start block: {}, end block: {}", startBlock, endBlock);
 
@@ -72,8 +81,20 @@ public class MethodAnalyser {
 
     }
 
+    private CurrentState getFinalState() {
+        ArrayList<CurrentState> currentStates = new ArrayList<>();
+
+        for (var blockIndex : endBlocks) {
+            currentStates.add(currentBlocksStates.get(blockIndex));
+        }
+
+        finalState = mergeCurrentStates(currentStates);
+        return finalState;
+    }
+
+
     public CurrentState getAnalysisResult() {
-        return currentBlocksStates.get(endBlock);
+        return getFinalState();
     }
 
     String getVarName(int i) {
@@ -133,11 +154,10 @@ public class MethodAnalyser {
 
         CurrentState previousState;
         do {
-            previousState = currentBlocksStates.get(endBlock);
+            previousState = getFinalState();
             analyseAllBlocks();
-        } while (!previousState.equals(currentBlocksStates.get(endBlock)));
+        } while (!previousState.equals(getFinalState()));
 
-        var finalState = currentBlocksStates.get(endBlock);
 //        logFinalState(finalState);
         logger.debug("End analysis, method: {}, class name: {}", method.getName(), method.getDeclaringClass().getName());
 
@@ -355,8 +375,35 @@ public class MethodAnalyser {
         // merge jvm states
         mergeJvmStates(currentStates, newCurrentState);
 
+        // merge return states
+        mergeReturnStates(currentStates, newCurrentState);
+
         return newCurrentState;
     }
+
+
+    private void mergeReturnStates(List<CurrentState> currentStates, CurrentState newCurrentState) {
+        Optional<Entity> newReturnState = Optional.empty();
+
+        for (var curState : currentStates) {
+            newReturnState = mergeOptionals(newReturnState, curState.getReturnState());
+        }
+
+        newReturnState.ifPresent(newCurrentState::updateReturnState);
+    }
+
+    Optional<Entity> mergeOptionals(Optional<Entity> optional1, Optional<Entity> optional2) {
+        if (optional1.isPresent() && optional2.isPresent()) {
+            return Optional.of(mergeTwoEntities(optional1.get(), optional2.get()));
+        }
+        else if (optional1.isPresent()) {
+            return optional1;
+        }
+        else {
+            return optional2;
+        }
+    }
+
 
     private void mergeJvmStates(List<CurrentState> currentStates, CurrentState newCurrentState) {
         // merge loaded classes

@@ -35,7 +35,7 @@ public class Analyser {
 
 
     public CurrentState analyseMethod(String className, String methodName, Map<Integer, Entity> derivativeArgs, String desc, Optional<Entity> currentObject, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
-        var myClass = prepareClass(className, jvmState);
+        var myClass = prepareClass(className, jvmState, stacktrace);
 
         var methodCFG = controlFlowGraph.getMethodCFG(className, methodName, desc);
         var method = controlFlowGraph.getBehavior(className, methodName, desc);
@@ -49,6 +49,12 @@ public class Analyser {
         if (Modifier.isNative(method.getModifiers())) {
             return methodEmptyState(method, jvmState);
         }
+
+        return analyseMethodInternal(stacktrace, myMethod, method, methodCFG, derivativeArgs, currentObject, jvmState);
+    }
+
+
+    private CurrentState analyseMethodInternal(ArrayDeque<MyMethod> stacktrace, MyMethod myMethod, CtBehavior method, ControlFlow.Block[] methodCFG, Map<Integer, Entity> derivativeArgs, Optional<Entity> currentObject, JVMState jvmState) {
 
         stacktrace.push(myMethod);
 
@@ -73,7 +79,7 @@ public class Analyser {
         return STANDARD_LIB_CLASSES.contains(className);
     }
 
-    public MyClass prepareClass(String className, JVMState jvmState) {
+    public MyClass prepareClass(String className, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
 
         MyClass myClass = new MyClass(className);
 
@@ -86,7 +92,7 @@ public class Analyser {
         }
 
         if (!jvmState.containsInitializedClass(myClass)) {
-            initialiseClass(myClass, jvmState);
+            initialiseClass(myClass, jvmState, stacktrace);
         }
 
         return myClass;
@@ -109,7 +115,7 @@ public class Analyser {
         }
     }
 
-    private void initialiseClass(MyClass myClass, JVMState jvmState) {
+    private void initialiseClass(MyClass myClass, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
         jvmState.addInitialisedClass(myClass, new ClassStaticFields(myClass));
 
         ControlFlow.Block[] initializerCFG = controlFlowGraph.createInitializerCFG(myClass.getFullName());
@@ -125,13 +131,13 @@ public class Analyser {
         // initialise predecessors
         var declaringClass = getSuperClass(curClass);
         if (declaringClass != null) {
-            prepareClass(declaringClass.getName(), jvmState);
+            prepareClass(declaringClass.getName(), jvmState, stacktrace);
         }
 
         // TODO
         try {
             for (var interf : curClass.getInterfaces()) {
-                prepareClass(interf.getName(), jvmState);
+                prepareClass(interf.getName(), jvmState, stacktrace);
             }
 
         } catch (NotFoundException e) {
@@ -139,7 +145,7 @@ public class Analyser {
         }
 
         // execute initializer
-        executeInitializer(initializer, initializerCFG, jvmState);
+        executeInitializer(initializer, initializerCFG, jvmState, stacktrace, myClass);
 
     }
 
@@ -151,14 +157,19 @@ public class Analyser {
     }
 
 
-    private void executeInitializer(CtConstructor initializer, ControlFlow.Block[] initializerCFG, JVMState jvmState) {
+    private void executeInitializer(CtConstructor initializer, ControlFlow.Block[] initializerCFG, JVMState jvmState, ArrayDeque<MyMethod> stacktrace, MyClass myClass) {
         if (initializer == null) {
             return;
         }
 
-        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, Map.of(), this, Optional.empty(), jvmState, new ArrayDeque<>());
-        analyser.analyse();
-        CurrentState result = analyser.getAnalysisResult();
+//        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, Map.of(), this, Optional.empty(), jvmState, new ArrayDeque<>());
+//        analyser.analyse();
+
+
+        MyMethod myMethod = new MyMethod(myClass, "<clinit>", "()V");
+        var result =  analyseMethodInternal(stacktrace, myMethod, initializer, initializerCFG, Map.of(), Optional.empty(), jvmState);
+
+//        CurrentState result = analyser.getAnalysisResult();
 
         jvmState.addLoadedClasses(result.getLoadedClasses());
         jvmState.addInitialisedClasses(result.getInitialisedClasses());

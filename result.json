@@ -1,73 +1,23 @@
 {
-  "loaded classes": [
-    "examples.staticfields.Main",
-    "examples.staticfields.Base"
-  ],
-  "initialised classes": [
-    "examples.staticfields.Main",
-    "examples.staticfields.Base"
-  ],
-  "static fields": {
-    "examples.staticfields.Main": {
-      "staticField": {
-        "type": "DERIVATIVE_SET",
-        "derivative from any of this": [
-          {
-            "line": 15,
-            "derivative from": [
-              {
-                "line": 7,
-                "derivative from": [
-                  {
-                    "root derivative": "args"
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    },
-    "examples.staticfields.Base": {
-      "field": {
-        "type": "DERIVATIVE_SET",
-        "derivative from any of this": [
-          {
-            "line": 18,
-            "derivative from": [
-              {
-                "root derivative": "args"
-              }
-            ]
-          }
-        ]
-      }
-    }
+  "static": {
+    "examples.recursionexample.Main": {}
   },
-  "variables array": [
-    {
-      "type": "DERIVATIVE_SET",
-      "derivative from any of this": [
-        {
-          "root derivative": "args"
-        }
-      ]
-    },
-    {
-      "type": "DERIVATIVE_SET",
-      "derivative from any of this": [
-        {
-          "line": 7,
-          "derivative from": [
-            {
-              "root derivative": "args"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "NON_DERIVATIVE"
-    }
+  "local": [
+    [
+      {
+        "root derivative": "args"
+      }
+    ],
+    [
+      {
+        "fileName": "Main.java",
+        "line": 5,
+        "from": [
+          {
+            "root derivative": "args"
+          }
+        ]
+      }
+    ]
   ]
 }

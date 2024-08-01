@@ -137,7 +137,7 @@ public class InstructionsProcessor {
     void processPutStatic(int indexInConstPool, Entity entity, CurrentState state, int line) {
         StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
 
-        analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getJvmState());
+        analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getJvmState(), analyser.stacktrace);
 
         MyClass myClass = new MyClass(fieldInfo.className);
         state.getJvmState().addClassStaticField(myClass, fieldInfo.name, analyser.createEntitySuccessor(entity, line));
@@ -146,7 +146,7 @@ public class InstructionsProcessor {
     Entity processGetStatic(int indexInConstPool, CurrentState state) {
         StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
 
-        analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getJvmState());
+        analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getJvmState(),  analyser.stacktrace);
 
         return state.getJvmState().getStaticField(new MyClass(fieldInfo.className), fieldInfo.name);
 
