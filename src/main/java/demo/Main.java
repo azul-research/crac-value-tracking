@@ -1,5 +1,6 @@
 package demo;
 
+import java.sql.SQLOutput;
 import java.util.Objects;
 
 class Main {
@@ -9,10 +10,14 @@ class Main {
     static String longestWord = "";
 
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         if (args.length < 3) {
             return;
         }
+
+        System.out.println(System.getenv("CLASS_PATH"));
+        System.out.println(1);
+
 
         maxLength = args[0].length();
         longestWord = args[0];
@@ -26,10 +31,7 @@ class Main {
                 maxLength = n;
                 longestWord = args[i];
             }
-
         }
-
-//        throw new Exception();
 
     }
 }

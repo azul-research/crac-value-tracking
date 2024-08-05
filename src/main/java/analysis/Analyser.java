@@ -11,15 +11,14 @@ import java.util.*;
 
 public class Analyser {
 
-
     static final String STANDARD_LIB_NAME = "java.lang.";
 
     static final String MAIN_FUNCTION_DESC = "([Ljava/lang/String;)V";
     static final String MAIN_FUNCTION_NAME = "main";
 
 
-    static final Set<String> STANDARD_LIB_CLASSES = Set.of(
-//            "java.lang.String",
+    static final Set<String> INITIALIZED_CLASSES = Set.of(
+            "java.lang.String",
             "java.lang.ClassLoader",
             "java.lang.Object");
 
@@ -76,7 +75,7 @@ public class Analyser {
 
 
     private boolean classFromStandardLib(String className) {
-        return STANDARD_LIB_CLASSES.contains(className);
+        return INITIALIZED_CLASSES.contains(className);
     }
 
     public MyClass prepareClass(String className, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
@@ -101,8 +100,12 @@ public class Analyser {
 
     public CurrentState analyseProgram() {
         var jvmState = new JVMState();
-
         ArrayDeque<MyMethod> stacktrace = new ArrayDeque<>();
+
+        for (var cl : INITIALIZED_CLASSES) {
+            prepareClass(cl, jvmState, stacktrace);
+        }
+
         return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, Map.of(0, new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative("args"))), MAIN_FUNCTION_DESC, Optional.empty(), jvmState, stacktrace);
     }
 

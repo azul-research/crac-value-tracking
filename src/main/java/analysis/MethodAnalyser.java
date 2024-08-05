@@ -60,14 +60,7 @@ public class MethodAnalyser {
 
         this.blocks = cfgBlocks;
         this.startBlock = Collections.min(this.methodCFG.keySet());
-
-        this.endBlocks = new HashSet<>();
-        for (var block : blocks) {
-            if (block.exits() == 0) {
-                this.endBlocks.add(block.position());
-            }
-        }
-//        this.endBlock = Collections.max(this.methodCFG.keySet());
+        setEndBlocks();
 
 //        logger.debug("Start block: {}, end block: {}", startBlock, endBlock);
 
@@ -79,6 +72,15 @@ public class MethodAnalyser {
 
 //        logger.debug("Number of local variables: {}", numOfVars);
 
+    }
+
+    private void setEndBlocks() {
+        this.endBlocks = new HashSet<>();
+        for (var block : blocks) {
+            if (block.exits() == 0) {
+                this.endBlocks.add(block.position());
+            }
+        }
     }
 
     private CurrentState getFinalState() {

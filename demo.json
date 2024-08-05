@@ -1,1 +1,109 @@
-{"static":{"java.util.Objects":{},"java.lang.constant.Constable":{},"java.lang.CharSequence":{},"java.lang.constant.ConstantDesc":{},"java.lang.String$CaseInsensitiveComparator":{"serialVersionUID":"nonDerivative"},"java.lang.Comparable":{},"demo.Main":{"longestWord":[{"fileName":"Main.java","line":18,"from":[{"root derivative":"args"}]},{"fileName":"Main.java","line":27,"from":[{"root derivative":"args"}]}],"maxLength":[{"fileName":"Main.java","line":17,"from":[{"fileName":"String.java","line":4862,"from":[{"root derivative":"args"}]}]},{"fileName":"Main.java","line":26,"from":[{"fileName":"Main.java","line":24,"from":[{"fileName":"String.java","line":4862,"from":[{"root derivative":"args"}]}]}]}],"baseWord":"nonDerivative"},"java.lang.String":{"serialPersistentFields":"nonDerivative","CASE_INSENSITIVE_ORDER":"nonDerivative","serialVersionUID":"nonDerivative","LATIN1":"nonDerivative","REPL":"nonDerivative","UTF16":"nonDerivative","COMPACT_STRINGS":"nonDerivative"},"java.util.Comparator":{},"java.io.Serializable":{}},"local":[[{"root derivative":"args"}],"nonDerivative",[{"fileName":"Main.java","line":24,"from":[{"fileName":"String.java","line":4862,"from":[{"root derivative":"args"}]}]}]]}
+{
+  "static": {
+    "java.util.Objects": {},
+    "java.lang.constant.Constable": {},
+    "java.lang.CharSequence": {},
+    "java.lang.constant.ConstantDesc": {},
+    "java.lang.String$CaseInsensitiveComparator": {
+      "serialVersionUID": "nonDerivative"
+    },
+    "java.lang.Comparable": {},
+    "demo.Main": {
+      "longestWord": [
+        {
+          "fileName": "Main.java",
+          "line": 18,
+          "from": [
+            {
+              "root derivative": "args"
+            }
+          ]
+        },
+        {
+          "fileName": "Main.java",
+          "line": 27,
+          "from": [
+            {
+              "root derivative": "args"
+            }
+          ]
+        }
+      ],
+      "maxLength": [
+        {
+          "fileName": "Main.java",
+          "line": 17,
+          "from": [
+            {
+              "fileName": "String.java",
+              "line": 4862,
+              "from": [
+                {
+                  "root derivative": "args"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "fileName": "Main.java",
+          "line": 26,
+          "from": [
+            {
+              "fileName": "Main.java",
+              "line": 24,
+              "from": [
+                {
+                  "fileName": "String.java",
+                  "line": 4862,
+                  "from": [
+                    {
+                      "root derivative": "args"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "baseWord": "nonDerivative"
+    },
+    "java.lang.String": {
+      "serialPersistentFields": "nonDerivative",
+      "CASE_INSENSITIVE_ORDER": "nonDerivative",
+      "serialVersionUID": "nonDerivative",
+      "LATIN1": "nonDerivative",
+      "REPL": "nonDerivative",
+      "UTF16": "nonDerivative",
+      "COMPACT_STRINGS": "nonDerivative"
+    },
+    "java.util.Comparator": {},
+    "java.io.Serializable": {}
+  },
+  "local": [
+    [
+      {
+        "root derivative": "args"
+      }
+    ],
+    "nonDerivative",
+    [
+      {
+        "fileName": "Main.java",
+        "line": 24,
+        "from": [
+          {
+            "fileName": "String.java",
+            "line": 4862,
+            "from": [
+              {
+                "root derivative": "args"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  ]
+}
