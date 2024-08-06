@@ -1,6 +1,23 @@
 {
   "static": {
-    "examples.recursionexample.Main": {}
+    "java.lang.System": {
+      "initialIn": "nonDerivative",
+      "notSupportedJnuEncoding": "nonDerivative",
+      "err": "nonDerivative",
+      "in": "nonDerivative",
+      "NEVER": "nonDerivative",
+      "bootLayer": "nonDerivative",
+      "initialErrStream": "nonDerivative",
+      "lineSeparator": "nonDerivative",
+      "out": "nonDerivative",
+      "props": "nonDerivative",
+      "security": "nonDerivative",
+      "MAYBE": "nonDerivative",
+      "allowSecurityManager": "nonDerivative",
+      "cons": "nonDerivative"
+    },
+    "examples.envvarsexample.Main": {},
+    "java.lang.Object": {}
   },
   "local": [
     [
@@ -11,11 +28,9 @@
     [
       {
         "fileName": "Main.java",
-        "line": 5,
+        "line": 6,
         "from": [
-          {
-            "root derivative": "args"
-          }
+          "environmentalVariable"
         ]
       }
     ]

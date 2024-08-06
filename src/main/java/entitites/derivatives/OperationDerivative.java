@@ -41,12 +41,13 @@ public class OperationDerivative extends Derivative {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         OperationDerivative that = (OperationDerivative) o;
-        return line == that.line && Objects.deepEquals(predecessors, that.predecessors);
+        return line == that.line && Objects.deepEquals(predecessors, that.predecessors) && Objects.equals(fileName, that.fileName);
     }
+
 
     @Override
     public int hashCode() {
-        return Objects.hash(Arrays.hashCode(predecessors), line);
+        return Objects.hash(Arrays.hashCode(predecessors), fileName, line);
     }
 
     public Derivative[] getPredecessors() {

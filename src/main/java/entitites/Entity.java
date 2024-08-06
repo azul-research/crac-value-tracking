@@ -31,7 +31,7 @@ public class Entity {
     }
 
     Type type;
-    Set<Derivative> derivativeSet = new HashSet<>();
+    HashSet<Derivative> derivativeSet = new HashSet<>();
     Set<String> classNameSet = new HashSet<>();
 
 
@@ -63,7 +63,7 @@ public class Entity {
     }
 
 
-    public Set<Derivative> getDerivativeSet() {
+    public HashSet<Derivative> getDerivativeSet() {
         if (type != DERIVATIVE_SET) {
             return null;
         }
@@ -85,7 +85,7 @@ public class Entity {
         derivativeSet.add(derivative);
     }
 
-    public void setDerivativeSet(Set<Derivative> derivativeSet) {
+    public void setDerivativeSet(HashSet<Derivative> derivativeSet) {
         if (type != DERIVATIVE_SET) {
             return;
         }

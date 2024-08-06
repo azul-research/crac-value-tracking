@@ -7,12 +7,38 @@
     "java.lang.String$CaseInsensitiveComparator": {
       "serialVersionUID": "nonDerivative"
     },
+    "java.lang.System": {
+      "initialIn": "nonDerivative",
+      "notSupportedJnuEncoding": "nonDerivative",
+      "err": "nonDerivative",
+      "in": "nonDerivative",
+      "NEVER": "nonDerivative",
+      "bootLayer": "nonDerivative",
+      "initialErrStream": "nonDerivative",
+      "lineSeparator": "nonDerivative",
+      "out": "nonDerivative",
+      "props": "nonDerivative",
+      "security": "nonDerivative",
+      "MAYBE": "nonDerivative",
+      "allowSecurityManager": "nonDerivative",
+      "cons": "nonDerivative"
+    },
+    "java.lang.Object": {},
     "java.lang.Comparable": {},
     "demo.Main": {
+      "password": [
+        {
+          "fileName": "Main.java",
+          "line": 22,
+          "from": [
+            "environmentalVariable"
+          ]
+        }
+      ],
       "longestWord": [
         {
           "fileName": "Main.java",
-          "line": 18,
+          "line": 26,
           "from": [
             {
               "root derivative": "args"
@@ -21,7 +47,7 @@
         },
         {
           "fileName": "Main.java",
-          "line": 27,
+          "line": 35,
           "from": [
             {
               "root derivative": "args"
@@ -32,26 +58,11 @@
       "maxLength": [
         {
           "fileName": "Main.java",
-          "line": 17,
-          "from": [
-            {
-              "fileName": "String.java",
-              "line": 4862,
-              "from": [
-                {
-                  "root derivative": "args"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "fileName": "Main.java",
-          "line": 26,
+          "line": 34,
           "from": [
             {
               "fileName": "Main.java",
-              "line": 24,
+              "line": 32,
               "from": [
                 {
                   "fileName": "String.java",
@@ -65,9 +76,45 @@
               ]
             }
           ]
+        },
+        {
+          "fileName": "Main.java",
+          "line": 25,
+          "from": [
+            {
+              "fileName": "String.java",
+              "line": 4862,
+              "from": [
+                {
+                  "root derivative": "args"
+                }
+              ]
+            }
+          ]
         }
       ],
-      "baseWord": "nonDerivative"
+      "baseWord": "nonDerivative",
+      "passwordLength": [
+        {
+          "fileName": "Main.java",
+          "line": 23,
+          "from": [
+            {
+              "fileName": "String.java",
+              "line": 4862,
+              "from": [
+                {
+                  "fileName": "Main.java",
+                  "line": 22,
+                  "from": [
+                    "environmentalVariable"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     "java.lang.String": {
       "serialPersistentFields": "nonDerivative",
@@ -91,7 +138,7 @@
     [
       {
         "fileName": "Main.java",
-        "line": 24,
+        "line": 32,
         "from": [
           {
             "fileName": "String.java",

@@ -9,15 +9,18 @@ class Main {
     static String baseWord = "Hello";
     static String longestWord = "";
 
+    static int passwordLength;
+
+    static String password;
+
 
     public static void main(String[] args) {
         if (args.length < 3) {
             return;
         }
 
-        System.out.println(System.getenv("CLASS_PATH"));
-        System.out.println(1);
-
+        password = System.getenv("PASSWORD");
+        passwordLength = password.length();
 
         maxLength = args[0].length();
         longestWord = args[0];

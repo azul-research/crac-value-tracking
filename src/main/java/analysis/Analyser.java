@@ -1,20 +1,28 @@
 package analysis;
 
 import entitites.Entity;
+import entitites.derivatives.EnvironmentalRoot;
 import entitites.derivatives.RootDerivative;
+import entitites.derivatives.SystemPropertyRoot;
 import input.ControlFlowGraph;
 import javassist.*;
 import javassist.bytecode.analysis.ControlFlow;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import output.*;
 
 import java.util.*;
 
 public class Analyser {
+    private static final Logger logger = LogManager.getLogger(Analyser.class);
 
     static final String STANDARD_LIB_NAME = "java.lang.";
 
+    static final String SYSTEM_CLASS_NAME = "java.lang.System";
     static final String MAIN_FUNCTION_DESC = "([Ljava/lang/String;)V";
     static final String MAIN_FUNCTION_NAME = "main";
+    static final Set<String> GET_ENVIRONMENTAL_METHODS = Set.of("getenv");
+    static final Set<String> GET_SYSTEM_PROPERTY_METHODS = Set.of("getProperties", "getProperty");
 
 
     static final Set<String> INITIALIZED_CLASSES = Set.of(
@@ -33,7 +41,23 @@ public class Analyser {
     }
 
 
+    private boolean returnEnvironmentVariable(MyMethod method) {
+        if (method.myClass().getFullName().equals(SYSTEM_CLASS_NAME)) {
+            return GET_ENVIRONMENTAL_METHODS.contains(method.methodName());
+        }
+        return false;
+    }
+
+    private boolean returnSystemProperty(MyMethod method) {
+        if (method.myClass().getFullName().equals(SYSTEM_CLASS_NAME)) {
+            return GET_SYSTEM_PROPERTY_METHODS.contains(method.methodName());
+        }
+        return false;
+    }
+
+
     public CurrentState analyseMethod(String className, String methodName, Map<Integer, Entity> derivativeArgs, String desc, Optional<Entity> currentObject, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
+
         var myClass = prepareClass(className, jvmState, stacktrace);
 
         var methodCFG = controlFlowGraph.getMethodCFG(className, methodName, desc);
@@ -49,12 +73,18 @@ public class Analyser {
             return methodEmptyState(method, jvmState);
         }
 
+        if (returnEnvironmentVariable(myMethod)) {
+            return methodWithEnvironmentalReturn(method, jvmState);
+        }
+        if (returnSystemProperty(myMethod)) {
+            return methodWithSysPropertyReturn(method, jvmState);
+        }
+
         return analyseMethodInternal(stacktrace, myMethod, method, methodCFG, derivativeArgs, currentObject, jvmState);
     }
 
 
     private CurrentState analyseMethodInternal(ArrayDeque<MyMethod> stacktrace, MyMethod myMethod, CtBehavior method, ControlFlow.Block[] methodCFG, Map<Integer, Entity> derivativeArgs, Optional<Entity> currentObject, JVMState jvmState) {
-
         stacktrace.push(myMethod);
 
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, jvmState, stacktrace);
@@ -67,12 +97,31 @@ public class Analyser {
 
     CurrentState methodEmptyState(CtBehavior method, JVMState jvmState) {
         var result = CurrentState.getEmptyState(0, Map.of(), jvmState);
-        if (!method.getMethodInfo().getDescriptor().endsWith("V")) {
+        if (methodHasReturnValue(method)) {
             result.updateReturnState(new Entity(Entity.Type.UNDEFINED));
         }
         return result;
     }
 
+    CurrentState methodWithEnvironmentalReturn(CtBehavior method, JVMState jvmState) {
+        var result = CurrentState.getEmptyState(0, Map.of(), jvmState);
+        if (methodHasReturnValue(method)) {
+            result.updateReturnState(new Entity(Entity.Type.DERIVATIVE_SET, new EnvironmentalRoot()));
+        }
+        return result;
+    }
+
+    CurrentState methodWithSysPropertyReturn(CtBehavior method, JVMState jvmState) {
+        var result = CurrentState.getEmptyState(0, Map.of(), jvmState);
+        if (methodHasReturnValue(method)) {
+            result.updateReturnState(new Entity(Entity.Type.DERIVATIVE_SET, new SystemPropertyRoot()));
+        }
+        return result;
+    }
+
+    static boolean methodHasReturnValue(CtBehavior behavior) {
+        return !behavior.getMethodInfo().getDescriptor().endsWith("V");
+    }
 
     private boolean classFromStandardLib(String className) {
         return INITIALIZED_CLASSES.contains(className);
@@ -82,9 +131,9 @@ public class Analyser {
 
         MyClass myClass = new MyClass(className);
 
-        if (classFromStandardLib(className)) {
-            return myClass;
-        }
+//        if (classFromStandardLib(className)) {
+//            return myClass;
+//        }
 
         if (!jvmState.containsLoadedClass(myClass)) {
             jvmState.addLoadedClass(myClass);
@@ -102,9 +151,9 @@ public class Analyser {
         var jvmState = new JVMState();
         ArrayDeque<MyMethod> stacktrace = new ArrayDeque<>();
 
-        for (var cl : INITIALIZED_CLASSES) {
-            prepareClass(cl, jvmState, stacktrace);
-        }
+//        for (var cl : INITIALIZED_CLASSES) {
+//            prepareClass(cl, jvmState, stacktrace);
+//        }
 
         return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, Map.of(0, new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative("args"))), MAIN_FUNCTION_DESC, Optional.empty(), jvmState, stacktrace);
     }
@@ -165,12 +214,8 @@ public class Analyser {
             return;
         }
 
-//        MethodAnalyser analyser = new MethodAnalyser(initializerCFG, initializer, Map.of(), this, Optional.empty(), jvmState, new ArrayDeque<>());
-//        analyser.analyse();
-
-
         MyMethod myMethod = new MyMethod(myClass, "<clinit>", "()V");
-        var result =  analyseMethodInternal(stacktrace, myMethod, initializer, initializerCFG, Map.of(), Optional.empty(), jvmState);
+        var result = analyseMethodInternal(stacktrace, myMethod, initializer, initializerCFG, Map.of(), Optional.empty(), jvmState);
 
 //        CurrentState result = analyser.getAnalysisResult();
 
