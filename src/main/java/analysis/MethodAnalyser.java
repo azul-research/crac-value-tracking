@@ -147,7 +147,6 @@ public class MethodAnalyser {
     }
 
     public void analyse() {
-        logger.debug("Start analysis, method: {}, class name: {}", method.getName(), method.getDeclaringClass().getName());
 //        logger.debug("Control flow graph:");
 //        for (var bl : methodCFG.keySet().stream().sorted().toArray(Integer[]::new)) {
 //            logger.debug(methodCFG.get(bl));
@@ -161,14 +160,15 @@ public class MethodAnalyser {
         } while (!previousState.equals(getFinalState()));
 
 //        logFinalState(finalState);
-        logger.debug("End analysis, method: {}, class name: {}", method.getName(), method.getDeclaringClass().getName());
 
     }
 
     private void analyseAllBlocks() {
+        logger.debug("Start analysis, method: {}, class name: {}", method.getName(), method.getDeclaringClass().getName());
         for (var block : blocks) {
             analyseBasicBlock(block.position());
         }
+        logger.debug("End analysis, method: {}, class name: {}", method.getName(), method.getDeclaringClass().getName());
     }
 
 
@@ -213,7 +213,7 @@ public class MethodAnalyser {
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
             String name = Mnemonic.OPCODE[opcode];
-//            logger.debug("{}:{} instruction:{} {}", fileName, getLineNumber(index), index, name);
+            logger.debug("{}:{} instruction:{} {}", fileName, getLineNumber(index), index, name);
 
             if (matchConstLoad(name) || matchConstLoadFromPool(name) || matchByteLoad(name)) {
                 stack.push(createNonDerivative());

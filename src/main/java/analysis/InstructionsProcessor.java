@@ -113,7 +113,7 @@ public class InstructionsProcessor {
 
             derivativeArgs = getNonstaticMethodArguments(numberOfArguments, stack);
            var  objectRef = Optional.of(stack.pop());
-            System.out.println(objectRef.get().getClassNameSet());
+//            System.out.println(objectRef.get().getClassNameSet());
 
         } catch (NotFoundException e) {
             throw new RuntimeException(e);

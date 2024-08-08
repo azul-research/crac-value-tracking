@@ -1,16 +1,13 @@
 package demo;
 
-import java.sql.SQLOutput;
 import java.util.Objects;
 
 class Main {
 
-    static int maxLength;
     static String baseWord = "Hello";
     static String longestWord = "";
 
     static int passwordLength;
-
     static String password;
 
 
@@ -18,11 +15,9 @@ class Main {
         if (args.length < 3) {
             return;
         }
-
         password = System.getenv("PASSWORD");
         passwordLength = password.length();
 
-        maxLength = args[0].length();
         longestWord = args[0];
 
         for (int i = 0; i < args.length; i++) {
@@ -30,8 +25,7 @@ class Main {
                 continue;
             }
             int n = args[i].length();
-            if (maxLength < n) {
-                maxLength = n;
+            if (longestWord.length() < n) {
                 longestWord = args[i];
             }
         }

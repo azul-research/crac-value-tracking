@@ -42,14 +42,14 @@ public class Analyser {
 
 
     private boolean returnEnvironmentVariable(MyMethod method) {
-        if (method.myClass().getFullName().equals(SYSTEM_CLASS_NAME)) {
+        if (method.myClass().fullName().equals(SYSTEM_CLASS_NAME)) {
             return GET_ENVIRONMENTAL_METHODS.contains(method.methodName());
         }
         return false;
     }
 
     private boolean returnSystemProperty(MyMethod method) {
-        if (method.myClass().getFullName().equals(SYSTEM_CLASS_NAME)) {
+        if (method.myClass().fullName().equals(SYSTEM_CLASS_NAME)) {
             return GET_SYSTEM_PROPERTY_METHODS.contains(method.methodName());
         }
         return false;
@@ -64,6 +64,17 @@ public class Analyser {
         var method = controlFlowGraph.getBehavior(className, methodName, desc);
 
         var myMethod = new MyMethod(myClass, methodName, desc);
+
+//        if (methodName.equals("weakCompareAndSetLong")
+//                || methodName.equals("getAndAddLong")
+//                || methodName.equals("getLongVolatile")
+//                || methodName.equals("incrementAndGet")
+////                && className.equals("java.lang.ClassLoader")
+////                && desc.startsWith("()")
+//        )
+//        {
+//            return methodEmptyState(method, jvmState);
+//        }
 
         if (stacktrace.contains(myMethod)) {
             return methodEmptyState(method, jvmState);
@@ -85,6 +96,10 @@ public class Analyser {
 
 
     private CurrentState analyseMethodInternal(ArrayDeque<MyMethod> stacktrace, MyMethod myMethod, CtBehavior method, ControlFlow.Block[] methodCFG, Map<Integer, Entity> derivativeArgs, Optional<Entity> currentObject, JVMState jvmState) {
+        if (stacktrace.contains(myMethod)) {
+            return methodEmptyState(method, jvmState);
+        }
+
         stacktrace.push(myMethod);
 
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, jvmState, stacktrace);
@@ -170,9 +185,9 @@ public class Analyser {
     private void initialiseClass(MyClass myClass, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
         jvmState.addInitialisedClass(myClass, new ClassStaticFields(myClass));
 
-        ControlFlow.Block[] initializerCFG = controlFlowGraph.createInitializerCFG(myClass.getFullName());
-        var initializer = controlFlowGraph.getInitializer(myClass.getFullName());
-        CtClass curClass = controlFlowGraph.getClass(myClass.getFullName());
+        ControlFlow.Block[] initializerCFG = controlFlowGraph.createInitializerCFG(myClass.fullName());
+        var initializer = controlFlowGraph.getInitializer(myClass.fullName());
+        CtClass curClass = controlFlowGraph.getClass(myClass.fullName());
 
         // default values to static fields
         CtField[] staticFields = getStaticFields(curClass);

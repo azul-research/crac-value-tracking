@@ -29,7 +29,7 @@
       "password": [
         {
           "fileName": "Main.java",
-          "line": 22,
+          "line": 18,
           "from": [
             "environmentalVariable"
           ]
@@ -38,7 +38,7 @@
       "longestWord": [
         {
           "fileName": "Main.java",
-          "line": 26,
+          "line": 21,
           "from": [
             {
               "root derivative": "args"
@@ -47,48 +47,10 @@
         },
         {
           "fileName": "Main.java",
-          "line": 35,
+          "line": 29,
           "from": [
             {
               "root derivative": "args"
-            }
-          ]
-        }
-      ],
-      "maxLength": [
-        {
-          "fileName": "Main.java",
-          "line": 34,
-          "from": [
-            {
-              "fileName": "Main.java",
-              "line": 32,
-              "from": [
-                {
-                  "fileName": "String.java",
-                  "line": 4862,
-                  "from": [
-                    {
-                      "root derivative": "args"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "fileName": "Main.java",
-          "line": 25,
-          "from": [
-            {
-              "fileName": "String.java",
-              "line": 4862,
-              "from": [
-                {
-                  "root derivative": "args"
-                }
-              ]
             }
           ]
         }
@@ -97,7 +59,7 @@
       "passwordLength": [
         {
           "fileName": "Main.java",
-          "line": 23,
+          "line": 19,
           "from": [
             {
               "fileName": "String.java",
@@ -105,7 +67,7 @@
               "from": [
                 {
                   "fileName": "Main.java",
-                  "line": 22,
+                  "line": 18,
                   "from": [
                     "environmentalVariable"
                   ]
@@ -138,7 +100,7 @@
     [
       {
         "fileName": "Main.java",
-        "line": 32,
+        "line": 27,
         "from": [
           {
             "fileName": "String.java",

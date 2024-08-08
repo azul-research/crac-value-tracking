@@ -5,14 +5,14 @@
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %p %m%n"/>
         </Console>
 
-        <File name="File" fileName="logs/logs.log" append="true">
+        <File name="File" fileName="logs/logs.log" append="false">
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %p %m%n"/>
         </File>
 
     </Appenders>
     <Loggers>
         <Root level="debug">
-            <AppenderRef ref="Console"/>
+<!--            <AppenderRef ref="Console"/>-->
             <AppenderRef ref="File"/>
         </Root>
         <Logger name="your.package.name" level="debug" additivity="false">

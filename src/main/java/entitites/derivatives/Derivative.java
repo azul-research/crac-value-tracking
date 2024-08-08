@@ -1,10 +1,11 @@
 package entitites.derivatives;
 
+import java.util.ArrayList;
 import java.util.Objects;
 
 public abstract class Derivative {
     String className;
-
+    ArrayList<Derivative> successors = new ArrayList<>();
 
     public String getClassName() {
         return className;
@@ -22,5 +23,9 @@ public abstract class Derivative {
     @Override
     public int hashCode() {
         return Objects.hashCode(className);
+    }
+
+    public void addSuccessor(Derivative derivative) {
+        successors.add(derivative);
     }
 }
