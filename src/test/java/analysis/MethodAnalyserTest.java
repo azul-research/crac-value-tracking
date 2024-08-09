@@ -96,11 +96,14 @@ public class MethodAnalyserTest {
 
         MyClass myClassMain = new MyClass("examples.staticfields.Main");
         MyClass myClassBase = new MyClass("examples.staticfields.Base");
+        MyClass myClassObj = new MyClass("java.lang.Object");
 
-        Set<MyClass> expectedLoadedClasses = Set.of(myClassMain, myClassBase);
+        Set<MyClass> expectedLoadedClasses = Set.of(myClassMain, myClassBase, myClassObj);
         assertEquals(expectedLoadedClasses, result.getLoadedClasses());
 
         Map<MyClass, ClassStaticFields> expectedInitialisedClasses = new HashMap<>();
+
+        expectedInitialisedClasses.put(myClassObj, new ClassStaticFields(myClassObj));
 
         expectedInitialisedClasses.put(myClassMain, new ClassStaticFields(myClassMain));
         Entity staticFieldEntity = new Entity(Entity.Type.DERIVATIVE_SET, new OperationDerivative(12, "Main.java", new RootDerivative("args")), new OperationDerivative(15, "Main.java", new OperationDerivative(7, "Main.java", new RootDerivative("args"))));
