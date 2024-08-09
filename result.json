@@ -1,97 +1,29 @@
 {
   "static": {
-    "java.lang.Throwable": {
-      "jfrTracing": "nonDerivative",
-      "CAUSE_CAPTION": "nonDerivative",
-      "serialVersionUID": "nonDerivative",
-      "EMPTY_THROWABLE_ARRAY": "nonDerivative",
-      "SELF_SUPPRESSION_MESSAGE": "nonDerivative",
-      "$assertionsDisabled": "nonDerivative",
-      "UNASSIGNED_STACK": "nonDerivative",
-      "NULL_CAUSE_MESSAGE": "nonDerivative",
-      "SUPPRESSED_CAPTION": "nonDerivative",
-      "SUPPRESSED_SENTINEL": "nonDerivative"
-    },
-    "java.util.Collections$EmptyMap": {
-      "serialVersionUID": "nonDerivative"
-    },
-    "java.util.AbstractSet": {},
-    "java.util.AbstractList": {},
-    "java.lang.invoke.TypeDescriptor$OfField": {},
-    "java.lang.Iterable": {},
     "java.util.RandomAccess": {},
     "java.util.AbstractCollection": {},
-    "java.lang.constant.ConstantDesc": {},
-    "java.util.Map": {},
-    "examples.exceptionexample.Main": {},
-    "java.lang.String": {
-      "serialPersistentFields": "nonDerivative",
-      "CASE_INSENSITIVE_ORDER": "nonDerivative",
-      "serialVersionUID": "nonDerivative",
-      "LATIN1": "nonDerivative",
-      "REPL": "nonDerivative",
-      "UTF16": "nonDerivative",
-      "COMPACT_STRINGS": "nonDerivative"
-    },
-    "java.lang.invoke.TypeDescriptor": {},
-    "java.lang.reflect.GenericDeclaration": {},
-    "java.lang.CharSequence": {},
-    "java.util.Collection": {},
-    "java.util.Set": {},
-    "java.io.Serializable": {},
-    "java.lang.constant.Constable": {},
     "java.util.List": {},
-    "java.util.AbstractMap": {},
-    "java.util.Collections$EmptyList": {
-      "serialVersionUID": "nonDerivative"
-    },
-    "java.lang.String$CaseInsensitiveComparator": {
-      "serialVersionUID": "nonDerivative"
-    },
-    "java.lang.reflect.Type": {},
+    "java.lang.Cloneable": {},
+    "java.util.Collection": {},
+    "examples.exceptionexample.Main": {},
+    "java.util.AbstractList": {},
     "java.lang.Object": {},
-    "java.lang.Comparable": {},
-    "java.lang.Class": {
-      "serialPersistentFields": "nonDerivative",
-      "ENUM": "nonDerivative",
-      "serialVersionUID": "nonDerivative",
-      "ANNOTATION": "nonDerivative",
-      "SYNTHETIC": "nonDerivative",
-      "reflectionFactory": "nonDerivative",
-      "allPermDomain": "nonDerivative",
-      "EMPTY_CLASS_ARRAY": "nonDerivative"
-    },
-    "java.lang.ClassLoader": {
-      "nocerts": "nonDerivative",
-      "$assertionsDisabled": "nonDerivative",
-      "scl": "nonDerivative"
-    },
-    "java.util.Comparator": {},
-    "java.util.Collections$EmptySet": {
-      "serialVersionUID": "nonDerivative"
-    },
-    "java.util.Collections": {
-      "BINARYSEARCH_THRESHOLD": "nonDerivative",
-      "FILL_THRESHOLD": "nonDerivative",
-      "r": "nonDerivative",
-      "EMPTY_MAP": "nonDerivative",
-      "ROTATE_THRESHOLD": "nonDerivative",
-      "REVERSE_THRESHOLD": "nonDerivative",
-      "EMPTY_SET": "nonDerivative",
-      "EMPTY_LIST": "nonDerivative",
-      "COPY_THRESHOLD": "nonDerivative",
-      "INDEXOFSUBLIST_THRESHOLD": "nonDerivative",
-      "SHUFFLE_THRESHOLD": "nonDerivative",
-      "REPLACEALL_THRESHOLD": "nonDerivative"
-    },
+    "java.lang.Iterable": {},
     "java.util.SequencedCollection": {},
-    "java.lang.reflect.AnnotatedElement": {}
+    "java.util.ArrayList": {
+      "serialVersionUID": "nonDerivative",
+      "EMPTY_ELEMENTDATA": "nonDerivative",
+      "DEFAULTCAPACITY_EMPTY_ELEMENTDATA": "nonDerivative",
+      "DEFAULT_CAPACITY": "nonDerivative"
+    },
+    "java.io.Serializable": {}
   },
   "local": [
     [
       {
         "root derivative": "args"
       }
-    ]
+    ],
+    "nonDerivative"
   ]
 }

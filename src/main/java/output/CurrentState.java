@@ -1,6 +1,7 @@
 package output;
 
 import entitites.*;
+import entitites.derivatives.Derivative;
 import entitites.derivatives.RootDerivative;
 
 import java.util.*;

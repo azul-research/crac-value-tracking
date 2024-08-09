@@ -4,9 +4,6 @@
     "java.lang.constant.Constable": {},
     "java.lang.CharSequence": {},
     "java.lang.constant.ConstantDesc": {},
-    "java.lang.String$CaseInsensitiveComparator": {
-      "serialVersionUID": "nonDerivative"
-    },
     "java.lang.System": {
       "initialIn": "nonDerivative",
       "notSupportedJnuEncoding": "nonDerivative",
@@ -29,7 +26,7 @@
       "password": [
         {
           "fileName": "Main.java",
-          "line": 18,
+          "line": 14,
           "from": [
             "environmentalVariable"
           ]
@@ -38,45 +35,24 @@
       "longestWord": [
         {
           "fileName": "Main.java",
-          "line": 21,
+          "line": 28,
           "from": [
             {
-              "root derivative": "args"
+              "root derivative": "secretWords"
             }
           ]
         },
         {
           "fileName": "Main.java",
-          "line": 29,
+          "line": 20,
           "from": [
             {
-              "root derivative": "args"
+              "root derivative": "secretWords"
             }
           ]
         }
       ],
-      "baseWord": "nonDerivative",
-      "passwordLength": [
-        {
-          "fileName": "Main.java",
-          "line": 19,
-          "from": [
-            {
-              "fileName": "String.java",
-              "line": 4862,
-              "from": [
-                {
-                  "fileName": "Main.java",
-                  "line": 18,
-                  "from": [
-                    "environmentalVariable"
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
+      "baseWord": "nonDerivative"
     },
     "java.lang.String": {
       "serialPersistentFields": "nonDerivative",
@@ -87,27 +63,26 @@
       "UTF16": "nonDerivative",
       "COMPACT_STRINGS": "nonDerivative"
     },
-    "java.util.Comparator": {},
     "java.io.Serializable": {}
   },
   "local": [
     [
       {
-        "root derivative": "args"
+        "root derivative": "secretWords"
       }
     ],
     "nonDerivative",
     [
       {
         "fileName": "Main.java",
-        "line": 27,
+        "line": 26,
         "from": [
           {
             "fileName": "String.java",
             "line": 4862,
             "from": [
               {
-                "root derivative": "args"
+                "root derivative": "secretWords"
               }
             ]
           }

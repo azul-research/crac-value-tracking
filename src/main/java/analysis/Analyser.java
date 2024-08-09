@@ -1,11 +1,13 @@
 package analysis;
 
 import entitites.Entity;
+import entitites.derivatives.Derivative;
 import entitites.derivatives.EnvironmentalRoot;
 import entitites.derivatives.RootDerivative;
 import entitites.derivatives.SystemPropertyRoot;
 import input.ControlFlowGraph;
 import javassist.*;
+import javassist.bytecode.LocalVariableAttribute;
 import javassist.bytecode.analysis.ControlFlow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -65,16 +67,6 @@ public class Analyser {
 
         var myMethod = new MyMethod(myClass, methodName, desc);
 
-//        if (methodName.equals("weakCompareAndSetLong")
-//                || methodName.equals("getAndAddLong")
-//                || methodName.equals("getLongVolatile")
-//                || methodName.equals("incrementAndGet")
-////                && className.equals("java.lang.ClassLoader")
-////                && desc.startsWith("()")
-//        )
-//        {
-//            return methodEmptyState(method, jvmState);
-//        }
 
         if (stacktrace.contains(myMethod)) {
             return methodEmptyState(method, jvmState);
@@ -146,10 +138,6 @@ public class Analyser {
 
         MyClass myClass = new MyClass(className);
 
-//        if (classFromStandardLib(className)) {
-//            return myClass;
-//        }
-
         if (!jvmState.containsLoadedClass(myClass)) {
             jvmState.addLoadedClass(myClass);
         }
@@ -161,6 +149,16 @@ public class Analyser {
         return myClass;
     }
 
+    private String getMainArgumentName() {
+        try {
+
+            LocalVariableAttribute attr = (LocalVariableAttribute) controlFlowGraph.getClass(mainClassName).getMethod(MAIN_FUNCTION_NAME, MAIN_FUNCTION_DESC).getMethodInfo().getCodeAttribute().getAttribute(LocalVariableAttribute.tag);
+            return attr.variableNameByIndex(0);
+
+        } catch (NotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public CurrentState analyseProgram() {
         var jvmState = new JVMState();
@@ -170,7 +168,9 @@ public class Analyser {
 //            prepareClass(cl, jvmState, stacktrace);
 //        }
 
-        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, Map.of(0, new Entity(Entity.Type.DERIVATIVE_SET, new RootDerivative("args"))), MAIN_FUNCTION_DESC, Optional.empty(), jvmState, stacktrace);
+        var rootDerivative =  new RootDerivative(getMainArgumentName());
+
+        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, Map.of(0, new Entity(Entity.Type.DERIVATIVE_SET, rootDerivative)), MAIN_FUNCTION_DESC, Optional.empty(), jvmState, stacktrace);
     }
 
 
@@ -212,7 +212,7 @@ public class Analyser {
         }
 
         // execute initializer
-        executeInitializer(initializer, initializerCFG, jvmState, stacktrace, myClass);
+//        executeInitializer(initializer, initializerCFG, jvmState, stacktrace, myClass);
 
     }
 
@@ -231,8 +231,6 @@ public class Analyser {
 
         MyMethod myMethod = new MyMethod(myClass, "<clinit>", "()V");
         var result = analyseMethodInternal(stacktrace, myMethod, initializer, initializerCFG, Map.of(), Optional.empty(), jvmState);
-
-//        CurrentState result = analyser.getAnalysisResult();
 
         jvmState.addLoadedClasses(result.getLoadedClasses());
         jvmState.addInitialisedClasses(result.getInitialisedClasses());

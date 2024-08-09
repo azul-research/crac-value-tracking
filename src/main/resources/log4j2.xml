@@ -12,7 +12,7 @@
     </Appenders>
     <Loggers>
         <Root level="debug">
-<!--            <AppenderRef ref="Console"/>-->
+            <AppenderRef ref="Console"/>
             <AppenderRef ref="File"/>
         </Root>
         <Logger name="your.package.name" level="debug" additivity="false">

@@ -126,7 +126,7 @@ public class InstructionsProcessor {
         MethodInfo methodInfo = method.getMethodInfo();
         ConstPool constPool = methodInfo.getConstPool();
         String className = constPool.getClassInfo(typeIndex);
-        System.out.println(className);
+//        System.out.println(className);
         stack.push(createNonDerivative());
     }
 

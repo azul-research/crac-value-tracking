@@ -7,26 +7,25 @@ class Main {
     static String baseWord = "Hello";
     static String longestWord = "";
 
-    static int passwordLength;
     static String password;
 
 
-    public static void main(String[] args) {
-        if (args.length < 3) {
+    public static void main(String[] secretWords) {
+        password = System.getenv("PASSWORD");
+
+        if (secretWords.length < 3) {
             return;
         }
-        password = System.getenv("PASSWORD");
-        passwordLength = password.length();
 
-        longestWord = args[0];
+        longestWord = secretWords[0];
 
-        for (int i = 0; i < args.length; i++) {
-            if (Objects.equals(args[i], baseWord)) {
+        for (int i = 0; i < secretWords.length; i++) {
+            if (Objects.equals(secretWords[i], baseWord)) {
                 continue;
             }
-            int n = args[i].length();
+            int n = secretWords[i].length();
             if (longestWord.length() < n) {
-                longestWord = args[i];
+                longestWord = secretWords[i];
             }
         }
 

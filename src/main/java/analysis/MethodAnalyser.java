@@ -327,7 +327,10 @@ public class MethodAnalyser {
 
         for (var pred1 : first.getDerivativeSet()) {
             for (var pred2 : second.getDerivativeSet()) {
-                result.addDerivative(new OperationDerivative(codeLine, fileName, pred1, pred2));
+                var newDerivative = new OperationDerivative(codeLine, fileName, pred1, pred2);
+                pred1.addSuccessor(newDerivative);
+                pred2.addSuccessor(newDerivative);
+                result.addDerivative(newDerivative);
             }
         }
         return result;
@@ -340,7 +343,9 @@ public class MethodAnalyser {
         Entity newValue = new Entity(Entity.Type.DERIVATIVE_SET);
 
         for (var pred : oldValue.getDerivativeSet()) {
-            newValue.addDerivative(new OperationDerivative(line, fileName, pred));
+            var newDerivative = new OperationDerivative(line, fileName, pred);
+            pred.addSuccessor(newDerivative);
+            newValue.addDerivative(newDerivative);
         }
         return newValue;
     }
