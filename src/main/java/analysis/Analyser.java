@@ -212,7 +212,7 @@ public class Analyser {
         }
 
         // execute initializer
-//        executeInitializer(initializer, initializerCFG, jvmState, stacktrace, myClass);
+        executeInitializer(initializer, initializerCFG, jvmState, stacktrace, myClass);
 
     }
 

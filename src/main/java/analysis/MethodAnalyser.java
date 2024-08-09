@@ -164,11 +164,11 @@ public class MethodAnalyser {
     }
 
     private void analyseAllBlocks() {
-        logger.debug("Start analysis, method: {}, class name: {}", method.getName(), method.getDeclaringClass().getName());
+        logger.info("{}Start analysis, method: {}, class name: {}", "  ".repeat(stacktrace.size()), method.getName(), method.getDeclaringClass().getName());
         for (var block : blocks) {
             analyseBasicBlock(block.position());
         }
-        logger.debug("End analysis, method: {}, class name: {}", method.getName(), method.getDeclaringClass().getName());
+        logger.info("{}End analysis, method: {}, class name: {}", "  ".repeat(stacktrace.size()), method.getName(), method.getDeclaringClass().getName());
     }
 
 
@@ -213,7 +213,7 @@ public class MethodAnalyser {
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
             String name = Mnemonic.OPCODE[opcode];
-            logger.debug("{}:{} instruction:{} {}", fileName, getLineNumber(index), index, name);
+            logger.debug("{}{}:{} instruction:{} {}", "  ".repeat(stacktrace.size() + 1), fileName, getLineNumber(index), index, name);
 
             if (matchConstLoad(name) || matchConstLoadFromPool(name) || matchByteLoad(name)) {
                 stack.push(createNonDerivative());
