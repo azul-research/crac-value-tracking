@@ -21,11 +21,12 @@ Result will be saved to file `result.json`
 
 
 ## Authors and acknowledgment
-Author: Daria Suvorova <br>
+Author: Daria Suvorova (Azul Cyprus Summer 2024 internship)<br>
 Mentor: Anton Kozlov
 
 ## License
-For open source projects, say how it is licensed.
+
+BSD 2-Clause "Simplified" License
 
 ## Project status
 Project has unfinished parts, what is not done:
