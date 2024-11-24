@@ -27,7 +27,6 @@
 
 package analysis;
 
-import javassist.bytecode.BadBytecode;
 import javassist.bytecode.ByteArray;
 import javassist.bytecode.CodeAttribute;
 import javassist.bytecode.CodeIterator;

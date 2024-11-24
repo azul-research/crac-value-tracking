@@ -64,7 +64,6 @@ public class InstructionsProcessor {
         stack.push(analyser.createEntitiesUnion(first, second, analyser.getLineNumber(index)));
     }
 
-
     void processStoreToArray(int index, ArrayDeque<Entity> stack) {
         var value = stack.pop();
         var ind = stack.pop();
@@ -114,6 +113,14 @@ public class InstructionsProcessor {
         stack.push(second);
     }
 
+    void processDup1(ArrayDeque<Entity> stack) {
+        var first = stack.pop();
+        var second = stack.pop();
+        stack.push(first);
+        stack.push(second);
+        stack.push(first);
+    }
+
 
     void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int variableNumber) {
         var valueOnStack = stack.pop();
@@ -139,7 +146,7 @@ public class InstructionsProcessor {
             Map<Integer, Entity> derivativeArgs;
 
             derivativeArgs = getNonstaticMethodArguments(numberOfArguments, stack);
-           var  objectRef = Optional.of(stack.pop());
+            var objectRef = Optional.of(stack.pop());
 //            System.out.println(objectRef.get().getClassNameSet());
 
         } catch (NotFoundException e) {
@@ -173,7 +180,7 @@ public class InstructionsProcessor {
     Entity processGetStatic(int indexInConstPool, CurrentState state) {
         StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
 
-        analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getJvmState(),  analyser.stacktrace);
+        analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getJvmState(), analyser.stacktrace);
 
         return state.getJvmState().getStaticField(new MyClass(fieldInfo.className), fieldInfo.name);
 
@@ -229,41 +236,49 @@ public class InstructionsProcessor {
 
 
     void processInvokeMethod(int index, ArrayDeque<Entity> stack, CurrentState state, boolean isStatic) {
-        try {
-            var constPool = method.getDeclaringClass().getClassFile().getConstPool();
-            int methodRefIndex = constPool.getMethodrefClass(index);
-            String className = constPool.getClassInfo(methodRefIndex);
-            String methodName = constPool.getMethodrefName(index);
-            String methodDescriptor = constPool.getMethodrefType(index);
+        CurrentState resultState;
+
+        if (analyser.methodCalls.containsKey(index)) {
+            var methodCall = analyser.methodCalls.get(index);
+            methodCall.analyseAllBlocks();
+            resultState = methodCall.getAnalysisResult();
+        } else {
+            try {
+                var constPool = method.getDeclaringClass().getClassFile().getConstPool();
+                int methodRefIndex = constPool.getMethodrefClass(index);
+                String className = constPool.getClassInfo(methodRefIndex);
+                String methodName = constPool.getMethodrefName(index);
+                String methodDescriptor = constPool.getMethodrefType(index);
 //            logger.debug("Class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
 
-            int numberOfArguments = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool()).length;
+                int numberOfArguments = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool()).length;
 
-            Map<Integer, Entity> derivativeArgs;
+                Map<Integer, Entity> derivativeArgs;
 
-            Optional<Entity> objectRef = Optional.empty();
+                Optional<Entity> objectRef = Optional.empty();
 
-            if (isStatic) {
-                derivativeArgs = getStaticMethodArguments(numberOfArguments, stack);
-            } else {
-                derivativeArgs = getNonstaticMethodArguments(numberOfArguments, stack);
-                objectRef = Optional.of(stack.pop());
-                derivativeArgs.put(0, objectRef.get());
+                if (isStatic) {
+                    derivativeArgs = getStaticMethodArguments(numberOfArguments, stack);
+                } else {
+                    derivativeArgs = getNonstaticMethodArguments(numberOfArguments, stack);
+                    objectRef = Optional.of(stack.pop());
+                    derivativeArgs.put(0, objectRef.get());
+                }
+
+                var resultAnalyser = analyser.mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, objectRef, state.getJvmState(), analyser.stacktrace);
+
+                analyser.methodCalls.put(index, resultAnalyser);
+
+                resultState = resultAnalyser.getAnalysisResult();
+
+
+            } catch (NotFoundException e) {
+                throw new RuntimeException(e);
             }
-
-
-            CurrentState resultState = analyser.mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, objectRef, state.getJvmState(), analyser.stacktrace);
-
-
-
-            var result = resultState.getReturnState();
-            result.ifPresent(stack::push);
-
-
-        } catch (NotFoundException e) {
-            throw new RuntimeException(e);
         }
 
+        var result = resultState.getReturnState();
+        result.ifPresent(stack::push);
     }
 
 

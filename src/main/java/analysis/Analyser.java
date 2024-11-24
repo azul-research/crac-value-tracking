@@ -28,7 +28,6 @@
 package analysis;
 
 import entitites.Entity;
-import entitites.derivatives.Derivative;
 import entitites.derivatives.EnvironmentalRoot;
 import entitites.derivatives.RootDerivative;
 import entitites.derivatives.SystemPropertyRoot;
@@ -84,8 +83,7 @@ public class Analyser {
         return false;
     }
 
-
-    public CurrentState analyseMethod(String className, String methodName, Map<Integer, Entity> derivativeArgs, String desc, Optional<Entity> currentObject, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
+    public MethodAnalyserBase analyseMethod(String className, String methodName, Map<Integer, Entity> derivativeArgs, String desc, Optional<Entity> currentObject, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
 
         var myClass = prepareClass(className, jvmState, stacktrace);
 
@@ -94,39 +92,40 @@ public class Analyser {
 
         var myMethod = new MyMethod(myClass, methodName, desc);
 
+        CurrentState result = null;
 
         if (stacktrace.contains(myMethod)) {
-            return methodEmptyState(method, jvmState);
+            result = methodEmptyState(method, jvmState);
         }
 
         if (Modifier.isNative(method.getModifiers())) {
-            return methodEmptyState(method, jvmState);
+            result = methodEmptyState(method, jvmState);
         }
 
         if (returnEnvironmentVariable(myMethod)) {
-            return methodWithEnvironmentalReturn(method, jvmState);
+            result = methodWithEnvironmentalReturn(method, jvmState);
         }
         if (returnSystemProperty(myMethod)) {
-            return methodWithSysPropertyReturn(method, jvmState);
+            result = methodWithSysPropertyReturn(method, jvmState);
+        }
+
+        if (result != null) {
+            return new MethodAnalyserBase(result);
         }
 
         return analyseMethodInternal(stacktrace, myMethod, method, methodCFG, derivativeArgs, currentObject, jvmState);
     }
 
 
-    private CurrentState analyseMethodInternal(ArrayDeque<MyMethod> stacktrace, MyMethod myMethod, CtBehavior method, ControlFlow.Block[] methodCFG, Map<Integer, Entity> derivativeArgs, Optional<Entity> currentObject, JVMState jvmState) {
-        if (stacktrace.contains(myMethod)) {
-            return methodEmptyState(method, jvmState);
-        }
-
+    private MethodAnalyser analyseMethodInternal(ArrayDeque<MyMethod> stacktrace, MyMethod myMethod, CtBehavior method, ControlFlow.Block[] methodCFG, Map<Integer, Entity> derivativeArgs, Optional<Entity> currentObject, JVMState jvmState) {
         stacktrace.push(myMethod);
 
         MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, jvmState, stacktrace);
-        analyser.analyse();
+        analyser.analyseAllBlocks();
 
         stacktrace.pop();
 
-        return analyser.getAnalysisResult();
+        return analyser;
     }
 
     CurrentState methodEmptyState(CtBehavior method, JVMState jvmState) {
@@ -195,9 +194,9 @@ public class Analyser {
 //            prepareClass(cl, jvmState, stacktrace);
 //        }
 
-        var rootDerivative =  new RootDerivative(getMainArgumentName());
+        var rootDerivative = new RootDerivative(getMainArgumentName());
 
-        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, Map.of(0, new Entity(Entity.Type.DERIVATIVE_SET, rootDerivative)), MAIN_FUNCTION_DESC, Optional.empty(), jvmState, stacktrace);
+        return analyseMethod(mainClassName, MAIN_FUNCTION_NAME, Map.of(0, new Entity(Entity.Type.DERIVATIVE_SET, rootDerivative)), MAIN_FUNCTION_DESC, Optional.empty(), jvmState, stacktrace).getAnalysisResult();
     }
 
 
@@ -257,7 +256,7 @@ public class Analyser {
         }
 
         MyMethod myMethod = new MyMethod(myClass, "<clinit>", "()V");
-        var result = analyseMethodInternal(stacktrace, myMethod, initializer, initializerCFG, Map.of(), Optional.empty(), jvmState);
+        var result = analyseMethodInternal(stacktrace, myMethod, initializer, initializerCFG, Map.of(), Optional.empty(), jvmState).getAnalysisResult();
 
         jvmState.addLoadedClasses(result.getLoadedClasses());
         jvmState.addInitialisedClasses(result.getInitialisedClasses());

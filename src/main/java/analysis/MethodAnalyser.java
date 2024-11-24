@@ -45,7 +45,7 @@ import static analysis.InstructionsProcessor.parseNextBytes;
 import static entitites.Entity.createNonDerivative;
 import static output.CurrentState.getEmptyState;
 
-public class MethodAnalyser {
+public class MethodAnalyser extends MethodAnalyserBase {
     private static final Logger logger = LogManager.getLogger(MethodAnalyser.class);
     Map<Integer, ControlFlow.Block> methodCFG;
 
@@ -71,14 +71,18 @@ public class MethodAnalyser {
     JVMState startingJvmState;
     Map<Integer, Entity> startingDerivatives;
 
+    Map<Integer, MethodAnalyserBase> methodCalls = new HashMap<>();
+
     private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
 
     public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, Map<Integer, Entity> derivativeVars, Analyser mainAnalyser, Optional<Entity> thisObject, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
+        super(getEmptyState(method.getMethodInfo().getCodeAttribute().getMaxLocals(), derivativeVars, jvmState));
         this.stacktrace = stacktrace;
 
         this.thisObj = thisObject;
         this.mainAnalyser = mainAnalyser;
         this.codeAttribute = method.getMethodInfo().getCodeAttribute();
+
         this.method = method;
         setFileName(method);
 
@@ -121,7 +125,7 @@ public class MethodAnalyser {
         return finalState;
     }
 
-
+    @Override
     public CurrentState getAnalysisResult() {
         return getFinalState();
     }
@@ -139,7 +143,7 @@ public class MethodAnalyser {
 
     }
 
-    Integer getLineNumber(int i) { // i - number of bytecode instruction in method
+    int getLineNumber(int i) { // i - number of bytecode instruction in method
         var attribute = (LineNumberAttribute) codeAttribute.getAttribute(LineNumberAttribute.tag);
         return attribute.toLineNumber(i);
     }
@@ -185,12 +189,10 @@ public class MethodAnalyser {
             previousState = getFinalState();
             analyseAllBlocks();
         } while (!previousState.equals(getFinalState()));
-
-//        logFinalState(finalState);
-
     }
 
-    private void analyseAllBlocks() {
+    @Override
+    public void analyseAllBlocks() {
         logger.info("{}Start analysis, method: {}, class name: {}", "  ".repeat(stacktrace.size()), method.getName(), method.getDeclaringClass().getName());
         for (var block : blocks) {
             analyseBasicBlock(block.position());
@@ -304,7 +306,10 @@ public class MethodAnalyser {
                 processor.processNew(iterator, index, stack);
             } else if (matchDuplicateValue(name)) {
                 stack.push(stack.getFirst());
-            } else if (matchPop(name) | matchMonitor(name)) {
+            } else if (matchDuplicate1(name)) {
+                processor.processDup1(stack);
+            }
+            else if (matchPop(name) | matchMonitor(name)) {
                 stack.pop();
             } else if (matchPop2(name)) {
                 stack.pop();
@@ -415,7 +420,6 @@ public class MethodAnalyser {
         return newCurrentState;
     }
 
-
     private void mergeReturnStates(List<CurrentState> currentStates, CurrentState newCurrentState) {
         Optional<Entity> newReturnState = Optional.empty();
 
@@ -437,7 +441,6 @@ public class MethodAnalyser {
             return optional2;
         }
     }
-
 
     private void mergeJvmStates(List<CurrentState> currentStates, CurrentState newCurrentState) {
         // merge loaded classes
@@ -516,7 +519,6 @@ public class MethodAnalyser {
         return newEntity;
     }
 
-
     Entity mergeTwoEntities(Entity first, Entity second) {
         if (first.compareType(second) > 0) {
             first.addClassNames(second.getClassNameSet());
@@ -530,7 +532,5 @@ public class MethodAnalyser {
             first.addClassNames(second.getClassNameSet());
             return first;
         }
-
     }
-
 }

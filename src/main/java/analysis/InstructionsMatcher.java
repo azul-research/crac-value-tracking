@@ -155,6 +155,10 @@ public class InstructionsMatcher {
         return opcode.equals("dup");
     }
 
+    public static boolean matchDuplicate1(String opcode) {
+        return opcode.equals("dup_x1");
+    }
+
     public static boolean matchPop(String opcode) {
         return opcode.equals("pop");
     }
