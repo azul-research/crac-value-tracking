@@ -27,9 +27,13 @@
 
 package examples.simple;
 
+import static java.lang.Character.isExtendedPictographic;
+
 public class Main {
     public static void main(String[] args) {
         int a = 0;
-        String[] b = args;
+
+        Character ch = 'a';
+        boolean b = isExtendedPictographic(1);
     }
 }

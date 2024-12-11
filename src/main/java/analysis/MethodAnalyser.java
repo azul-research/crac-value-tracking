@@ -73,10 +73,8 @@ public class MethodAnalyser extends MethodAnalyserBase {
 
     Map<Integer, MethodAnalyserBase> methodCalls = new HashMap<>();
 
-    private static final int[] opcodeLength = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, 3, 1, 1, 0, 4, 3, 3, 5, 5};
-
     public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, Map<Integer, Entity> derivativeVars, Analyser mainAnalyser, Optional<Entity> thisObject, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
-        super(getEmptyState(method.getMethodInfo().getCodeAttribute().getMaxLocals(), derivativeVars, jvmState));
+        super(method, derivativeVars, jvmState);
         this.stacktrace = stacktrace;
 
         this.thisObj = thisObject;
@@ -90,18 +88,24 @@ public class MethodAnalyser extends MethodAnalyserBase {
         setMethodCFG(cfgBlocks);
 
         this.blocks = cfgBlocks;
-        this.startBlock = Collections.min(this.methodCFG.keySet());
-        setEndBlocks();
-
-//        logger.debug("Start block: {}, end block: {}", startBlock, endBlock);
-
-        this.numOfVars = codeAttribute.getMaxLocals();
+        if (cfgBlocks.length > 0) {
+            this.startBlock = Collections.min(this.methodCFG.keySet());
+            setEndBlocks();
+        }
+        else {
+            this.startBlock = 0;
+        }
+        if (codeAttribute != null) {
+            this.numOfVars = codeAttribute.getMaxLocals();
+        }
+        else {
+            this.numOfVars = derivativeVars.size();
+        }
         this.startingJvmState = jvmState;
         setCurrentBlocksStates(numOfVars, this.startingDerivatives, jvmState);
 
         this.processor = new InstructionsProcessor(this, method);
 
-//        logger.debug("Number of local variables: {}", numOfVars);
 
     }
 
@@ -242,6 +246,9 @@ public class MethodAnalyser extends MethodAnalyserBase {
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
             String name = Mnemonic.OPCODE[opcode];
+            if (fileName.equals("Character.java") && getLineNumber(index) == 10920 && index == 5 && name.equals("invokevirtual")) {
+                System.out.println(1);
+            }
             logger.debug("{}{}:{} instruction:{} {}", "  ".repeat(stacktrace.size() + 1), fileName, getLineNumber(index), index, name);
 
             if (matchConstLoad(name) || matchConstLoadFromPool(name) || matchByteLoad(name)) {

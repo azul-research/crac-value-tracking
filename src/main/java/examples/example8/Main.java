@@ -28,12 +28,17 @@
 package examples.example8;
 
 
+import static java.lang.Character.isExtendedPictographic;
+
 public class Main {
 
     public static void main(String[] args) {
         Foo f = new Foo();
 
         int a = f.value();
+
+        Character ch = 'a';
+        boolean b = isExtendedPictographic(1);
 
     }
 

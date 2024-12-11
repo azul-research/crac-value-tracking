@@ -1,22 +1,7 @@
 {
   "static": {
-    "java.util.RandomAccess": {},
-    "java.util.AbstractCollection": {},
-    "java.util.List": {},
-    "java.lang.Cloneable": {},
-    "java.util.Collection": {},
-    "examples.exceptionexample.Main": {},
-    "java.util.AbstractList": {},
-    "java.lang.Object": {},
-    "java.lang.Iterable": {},
-    "java.util.SequencedCollection": {},
-    "java.util.ArrayList": {
-      "serialVersionUID": "nonDerivative",
-      "EMPTY_ELEMENTDATA": "nonDerivative",
-      "DEFAULTCAPACITY_EMPTY_ELEMENTDATA": "nonDerivative",
-      "DEFAULT_CAPACITY": "nonDerivative"
-    },
-    "java.io.Serializable": {}
+    "examples.simple.Main": {},
+    "java.lang.Object": {}
   },
   "local": [
     [
@@ -24,6 +9,17 @@
         "root derivative": "args"
       }
     ],
-    "nonDerivative"
+    "nonDerivative",
+    [
+      {
+        "fileName": "Main.java",
+        "line": 33,
+        "from": [
+          {
+            "root derivative": "args"
+          }
+        ]
+      }
+    ]
   ]
 }

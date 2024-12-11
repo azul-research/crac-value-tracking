@@ -94,7 +94,7 @@ public class Analyser {
 
         CurrentState result = null;
 
-        if (stacktrace.contains(myMethod)) {
+        if (stacktrace.contains(myMethod) || methodCFG.length == 0) {
             result = methodEmptyState(method, jvmState);
         }
 
@@ -108,6 +108,7 @@ public class Analyser {
         if (returnSystemProperty(myMethod)) {
             result = methodWithSysPropertyReturn(method, jvmState);
         }
+
 
         if (result != null) {
             return new MethodAnalyserBase(result);
