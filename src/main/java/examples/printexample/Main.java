@@ -24,16 +24,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 package examples.printexample;
-import java.lang.ClassLoader;
 
 
 public class Main {
+    static String result;
 
     public static void main(String[] args) {
-        String s = args[0];
-        System.out.println(s);
+        var password = System.getenv("password");
+        var hashed = password + "27585";
+
+        result = hashed;
     }
 
 

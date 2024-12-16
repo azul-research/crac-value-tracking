@@ -1,0 +1,19 @@
+{
+  "environmentalVariables": [
+    {
+      "fileName": "Main.java",
+      "line": 34,
+      "next": {
+        "fileName": "Main.java",
+        "line": 35,
+        "next": {
+          "fileName": "Main.java",
+          "line": 37,
+          "next": "staticVariable"
+        }
+
+      }
+    }
+  ]
+
+}
