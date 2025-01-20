@@ -6,6 +6,7 @@ import org.json.JSONTokener;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +20,6 @@ public class ReverseJson {
         var classNames = classesObject.keys();
         while (classNames.hasNext()) {
             var className = classNames.next();
-            System.out.println(className);
             var fieldsObject = ((JSONObject) classesObject.get(className));
             var fieldsNames = fieldsObject.keys();
             while (fieldsNames.hasNext()) {
@@ -39,7 +39,7 @@ public class ReverseJson {
                 if (element instanceof JSONObject jsonObject) {
                     if (jsonObject.has("from")) {
                         var newObject = new JSONObject();
-                        newObject.put("from", nextObject);
+                        newObject.put("next", nextObject);
                         newObject.put("fileName", jsonObject.get("fileName"));
                         newObject.put("line", jsonObject.get("line"));
                         reverseInternal(jsonObject.get("from"), newObject);
@@ -66,10 +66,16 @@ public class ReverseJson {
     }
 
     public static void main(String[] args) {
+        if (args.length < 2) {
+            System.out.println("Usage: ReverseJson <input-file-path> <output-file-path>");
+            return;
+        }
+        String inputFilePath = args[0];
+        String outputFilePath = args[1];
         var reverser = new ReverseJson();
-        File file = new File("demo.json");
+        File file = new File(inputFilePath);
 
-        try (FileInputStream fileInputStream = new FileInputStream(file)) {
+        try (FileInputStream fileInputStream = new FileInputStream(file); FileWriter fileWriter = new FileWriter(outputFilePath)) {
             JSONTokener tokener = new JSONTokener(fileInputStream);
             JSONObject root = new JSONObject(tokener);
 
@@ -78,6 +84,9 @@ public class ReverseJson {
             for (var res: reverser.results) {
                 System.out.println(res.toString(2));
             }
+
+            fileWriter.write(new JSONArray(reverser.results).toString(2));
+
 
         } catch (IOException e) {
             throw new RuntimeException(e);

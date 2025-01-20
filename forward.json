@@ -1,19 +1,17 @@
-{
-  "environmentalVariables": [
-    {
-      "fileName": "Main.java",
-      "line": 34,
-      "next": {
-        "fileName": "Main.java",
-        "line": 35,
-        "next": {
-          "fileName": "Main.java",
-          "line": 37,
-          "next": "staticVariable"
-        }
-
-      }
-    }
-  ]
-
-}
+[
+  {"environmentalVariable": {
+    "next": {"static": "password"},
+    "fileName": "Main.java",
+    "line": 14
+  }},
+  {"root derivative": {
+    "next": {"static": "longestWord"},
+    "fileName": "Main.java",
+    "line": 28
+  }},
+  {"root derivative": {
+    "next": {"static": "longestWord"},
+    "fileName": "Main.java",
+    "line": 20
+  }}
+]
