@@ -34,6 +34,7 @@ import entitites.derivatives.OperationDerivative;
 import entitites.derivatives.RootDerivative;
 import entitites.derivatives.SystemPropertyRoot;
 import output.ClassStaticFields;
+import output.ReverseJson;
 import serializers.*;
 import output.CurrentState;
 
@@ -63,8 +64,7 @@ public class UnsafeCodeAnalysis {
 
         saveToJson(result, args[2]);
 
-//        analyseMethod(getSourceFile("java"), "java.lang.String", "contentEquals", List.of(0, 1));
-//        analyseMethod(args[0], args[1], "main", List.of(0));
+        ReverseJson.main(new String[]{args[2], "forward.json"});
 
     }
 

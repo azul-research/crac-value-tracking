@@ -2,16 +2,11 @@
   {"environmentalVariable": {
     "next": {"static": "password"},
     "fileName": "Main.java",
-    "line": 14
+    "line": 41
   }},
   {"root derivative": {
     "next": {"static": "longestWord"},
     "fileName": "Main.java",
-    "line": 28
-  }},
-  {"root derivative": {
-    "next": {"static": "longestWord"},
-    "fileName": "Main.java",
-    "line": 20
+    "line": 47
   }}
 ]

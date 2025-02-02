@@ -1,27 +1,53 @@
 {
   "static": {
-    "examples.simple.Main": {},
-    "java.lang.Object": {}
+    "java.lang.System": {
+      "initialIn": "nonDerivative",
+      "notSupportedJnuEncoding": "nonDerivative",
+      "err": "nonDerivative",
+      "in": "nonDerivative",
+      "NEVER": "nonDerivative",
+      "bootLayer": "nonDerivative",
+      "initialErrStream": "nonDerivative",
+      "lineSeparator": "nonDerivative",
+      "out": "nonDerivative",
+      "props": "nonDerivative",
+      "security": "nonDerivative",
+      "MAYBE": "nonDerivative",
+      "allowSecurityManager": "nonDerivative",
+      "cons": "nonDerivative"
+    },
+    "java.lang.Object": {},
+    "demo.Main": {
+      "password": [
+        {
+          "fileName": "Main.java",
+          "line": 41,
+          "from": [
+            "environmentalVariable"
+          ]
+        }
+      ],
+      "longestWord": [
+        {
+          "fileName": "Main.java",
+          "line": 47,
+          "from": [
+            {
+              "root derivative": "secretWords"
+            }
+          ]
+        }
+      ],
+      "baseWord": "nonDerivative"
+    }
   },
   "local": [
     [
       {
-        "root derivative": "args"
+        "root derivative": "secretWords"
       }
     ],
     "nonDerivative",
-    [
-      {
-        "fileName": "Main.java",
-        "line": 33,
-        "from": [
-          {
-            "root derivative": "args"
-          }
-        ]
-      }
-    ]
+    "nonDerivative"
   ]
 }
-
-
