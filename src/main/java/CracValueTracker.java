@@ -42,29 +42,30 @@ import output.CurrentState;
 import java.io.File;
 import java.io.IOException;
 
-import java.util.Arrays;
-import java.util.Objects;
 
-
-public class UnsafeCodeAnalysis {
-    public static void main(String[] args) throws IOException {
-
-        if (args.length < 3) {
+public class CracValueTracker {
+    public static void main(String[] args) {
+        if (args.length < 4) {
             System.out.println("""
                     Not enough arguments:\s
                     first argument - path to .jar file,\s
                     second argument - full name of Main class,\s
-                    third argument - file name""");
+                    third argument - file name for backward analysis,\s
+                    fourth argument - file name for forward analysis""");
             return;
         }
+        var jarPath = args[0];
+        var mainClass = args[1];
+        var fileNameBackward = args[2];
+        var fileNameForward = args[3];
 
-        Analyser analyser = new Analyser(args[0], args[1]);
+        Analyser analyser = new Analyser(jarPath, mainClass);
 
         CurrentState result = analyser.analyseProgram();
 
-        saveToJson(result, args[2]);
+        saveToJson(result, fileNameBackward);
 
-        ReverseJson.main(new String[]{args[2], "forward.json"});
+        ReverseJson.main(new String[]{fileNameBackward, fileNameForward});
 
     }
 
@@ -90,30 +91,4 @@ public class UnsafeCodeAnalysis {
             throw new RuntimeException(e);
         }
     }
-
-
-    public static String getClassName(String classPath) {
-        String[] splittedPath = classPath.split("/");
-        if (splittedPath.length < 2) {
-            System.out.println("INCORRECT CLASS PATH");
-            return null;
-        }
-        int i = 0;
-
-        while (i < splittedPath.length && !Objects.equals(splittedPath[i], "java")) {
-            i++;
-        }
-        if (i == splittedPath.length) {
-            System.out.println("INCORRECT CLASS PATH");
-            return null;
-        }
-
-        splittedPath = Arrays.copyOfRange(splittedPath, i + 1, splittedPath.length);
-
-        String result = String.join(".", splittedPath);
-        return result.replace(".class", "");
-
-
-    }
-
 }

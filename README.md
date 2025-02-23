@@ -14,10 +14,11 @@ Result is a json file, it contains 2 parts: *static* - info about static fields,
 How to use: execute main method from UnsafeCodeAnalysis class with arguments: <br>
 **first argument** - path to .jar file <br>
 **second argument** - full name of Main class <br>
-**third argument** - output file name (json file) <br>
-Example of arguments: `src/test/java/testJarFiles/mainifandwhile.jar examples.ifandwhile.Main result.json`
+**third argument** - output file name (json file) for backward analysis <br>
+**fourth argument** - output file name (json file) for forward analysis <br>
+Example of arguments: `src/test/java/jars/test0.jar test.cases.test0.Main backward.json forward.json`
 
-Result will be saved to file `result.json`
+Result will be saved to files `backward.json` and `forward.json`
 
 
 ## Authors and acknowledgment
