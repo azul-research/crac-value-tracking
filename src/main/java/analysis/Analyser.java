@@ -191,9 +191,9 @@ public class Analyser {
         var jvmState = new JVMState();
         ArrayDeque<MyMethod> stacktrace = new ArrayDeque<>();
 
-//        for (var cl : INITIALIZED_CLASSES) {
-//            prepareClass(cl, jvmState, stacktrace);
-//        }
+        for (var cl : INITIALIZED_CLASSES) {
+            prepareClass(cl, jvmState, stacktrace);
+        }
 
         var rootDerivative = new RootDerivative(getMainArgumentName());
 

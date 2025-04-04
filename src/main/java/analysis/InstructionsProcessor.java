@@ -121,6 +121,16 @@ public class InstructionsProcessor {
         stack.push(first);
     }
 
+    void processDup2(ArrayDeque<Entity> stack) {
+        var first = stack.pop();
+        var second = stack.pop();
+        var third = stack.pop();
+        stack.push(first);
+        stack.push(third);
+        stack.push(second);
+        stack.push(first);
+    }
+
 
     void processDataStore(int index, ArrayDeque<Entity> stack, CurrentState state, int variableNumber) {
         var valueOnStack = stack.pop();

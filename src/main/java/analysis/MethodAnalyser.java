@@ -243,6 +243,16 @@ public class MethodAnalyser extends MethodAnalyserBase {
 
         ArrayDeque<Entity> stack = state.getStack();
 
+        var exTable = codeAttribute.getExceptionTable();
+        var exTableIndexes = new HashSet<Integer>();
+        for (int i = 0; i < exTable.size(); i++) {
+            int handlerPc = exTable.handlerPc(i);
+            exTableIndexes.add(handlerPc);
+        }
+        if (exTableIndexes.contains(blockIndex)) {
+            stack.push(createNonDerivative());
+        }
+
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
             String name = Mnemonic.OPCODE[opcode];
@@ -303,11 +313,16 @@ public class MethodAnalyser extends MethodAnalyserBase {
             } else if (matchGetStatic(name)) {
                 int indexInConstPool = parseNextBytes(iterator, index, 2);
                 Entity staticField = processor.processGetStatic(indexInConstPool, state);
+                if (staticField == null) {
+                    logger.warn("NO STATIC FIELD FOUND at index {}", indexInConstPool);
+                    staticField = createNonDerivative();
+                }
                 stack.push(staticField);
             } else if (matchPutStatic(name)) {
                 int indexInConstPool = parseNextBytes(iterator, index, 2);
                 processor.processPutStatic(indexInConstPool, stack.pop(), state, getLineNumber(index));
             } else if (matchGetArrayLength(name)) {
+                stack.pop();
                 stack.push(createNonDerivative());
             } else if (matchNew(name)) {
                 processor.processNew(iterator, index, stack);
@@ -315,7 +330,10 @@ public class MethodAnalyser extends MethodAnalyserBase {
                 stack.push(stack.getFirst());
             } else if (matchDuplicate1(name)) {
                 processor.processDup1(stack);
+            } else if (matchDuplicate2(name)) {
+                processor.processDup2(stack);
             }
+
             else if (matchPop(name) | matchMonitor(name)) {
                 stack.pop();
             } else if (matchPop2(name)) {

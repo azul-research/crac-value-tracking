@@ -35,7 +35,7 @@ import java.util.Objects;
 
 public class ClassStaticFields {
 
-    private MyClass myClass;
+    private final MyClass myClass;
 
     private final Map<String, Entity> staticFields;
 

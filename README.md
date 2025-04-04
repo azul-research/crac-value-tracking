@@ -20,6 +20,15 @@ Example of arguments: `src/test/java/jars/test0.jar test.cases.test0.Main backwa
 
 Result will be saved to files `backward.json` and `forward.json`
 
+## Tests
+Before running test, [jar-generation.sh](jar-generation.sh) should be executed <br>
+
+To add new test:
+* add new test case to [cases](src/main/java/test/cases) 
+* increment `testNumber` in [CRaCValueTrackerTest.java](src/test/java/CRaCValueTrackerTest.java)
+* execute [jar-generation.sh](jar-generation.sh)
+* run [CRaCValueTrackerTest.java](src/test/java/CRaCValueTrackerTest.java) 
+
 
 ## Authors and acknowledgment
 Author: Daria Suvorova (Azul Cyprus Summer 2024 internship)<br>
