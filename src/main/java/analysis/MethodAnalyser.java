@@ -256,7 +256,7 @@ public class MethodAnalyser extends MethodAnalyserBase {
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
             String name = Mnemonic.OPCODE[opcode];
-            if (fileName.equals("Character.java") && getLineNumber(index) == 10920 && index == 5 && name.equals("invokevirtual")) {
+            if (fileName.equals("ArraysSupport.java") && getLineNumber(index) == 401 && index == 95 && name.equals("iinc")) {
                 System.out.println(1);
             }
             logger.debug("{}{}:{} instruction:{} {}", "  ".repeat(stacktrace.size() + 1), fileName, getLineNumber(index), index, name);
@@ -298,10 +298,15 @@ public class MethodAnalyser extends MethodAnalyserBase {
             } else if (matchInvokeInterface(name)) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
 //                processor.processInvokeInterface(methodIndex, stack);
-            } else if (matchInvokeStatic(name) | matchInvokeDynamic(name)) {
+            } else if (matchInvokeStatic(name)
+            ) {
                 var methodIndex = parseNextBytes(iterator, index, 2);
                 processor.processInvokeMethod(methodIndex, stack, state, true);
-            } else if (matchReturnVoid(name)) {
+            } else if (matchInvokeDynamic(name)) {
+                var methodIndex = parseNextBytes(iterator, index, 2);
+                processor.processInvokeDynamic(methodIndex, stack, state);
+            }
+            else if (matchReturnVoid(name)) {
                 state.setEmptyReturn();
             } else if (matchReturnValue(name)) {
                 state.updateReturnState(stack.pop());
