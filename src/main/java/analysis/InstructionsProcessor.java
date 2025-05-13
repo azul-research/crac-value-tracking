@@ -27,6 +27,8 @@
 
 package analysis;
 
+import data.AnalyzedMethodsStorage;
+import data.MethodsStorage;
 import entitites.Entity;
 import entitites.derivatives.OperationDerivative;
 import javassist.CtBehavior;
@@ -84,7 +86,7 @@ public class InstructionsProcessor {
     void processIncrementLocal(int index, CurrentState state, CodeIterator iterator) {
         var varIndex = parseNextBytes(iterator, index, 1);
         if (state.isVariableDerivative(varIndex)) {
-            state.updateVariable(varIndex, analyser.createEntitySuccessor(state.getVariableValue(index), analyser.getLineNumber(index)));
+            state.updateVariable(varIndex, analyser.createEntitySuccessor(state.getVariableValue(varIndex), analyser.getLineNumber(index)));
         } else {
             state.updateVariable(varIndex, createNonDerivative());
         }
@@ -179,6 +181,10 @@ public class InstructionsProcessor {
 
 
     void processPutStatic(int indexInConstPool, Entity entity, CurrentState state, int line) {
+        var currentMethod = analyser.currentMethod;
+        var analyzedMethod = AnalyzedMethodsStorage.putMethod(currentMethod.className().fullName(), currentMethod.methodName(), currentMethod.methodDescriptor());
+        analyzedMethod.setContainsPutStatic();
+
         StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
 
         analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getJvmState(), analyser.stacktrace);
@@ -188,6 +194,10 @@ public class InstructionsProcessor {
     }
 
     Entity processGetStatic(int indexInConstPool, CurrentState state) {
+        var currentMethod = analyser.currentMethod;
+        var analyzedMethod = AnalyzedMethodsStorage.putMethod(currentMethod.className().fullName(), currentMethod.methodName(), currentMethod.methodDescriptor());
+        analyzedMethod.setContainsGetStatic();
+
         StaticFieldInfo fieldInfo = getFieldNameAndClassName(indexInConstPool);
 
         analyser.getMainAnalyser().prepareClass(fieldInfo.className, state.getJvmState(), analyser.stacktrace);
@@ -270,6 +280,7 @@ public class InstructionsProcessor {
     void processInvokeMethod(int index, ArrayDeque<Entity> stack, CurrentState state, boolean isStatic) {
         CurrentState resultState;
 
+        boolean requiresAnalysis = true;
         try {
             var constPool = method.getDeclaringClass().getClassFile().getConstPool();
             String methodDescriptor = constPool.getMethodrefType(index);
@@ -278,23 +289,13 @@ public class InstructionsProcessor {
             methodCall.analyseAllBlocks();
             resultState = methodCall.getAnalysisResult();
         } else {
-//            if (Descriptor.getReturnType(methodDescriptor, method.getDeclaringClass().getClassPool()) == null) {
-//                if (MethodsStorage.contains(method.getDeclaringClass().getName(), method.getName(), methodDescriptor)) {
-//                    if (MethodsStorage.getGlobalEpoch() == MethodsStorage.getEpoch(method.getDeclaringClass().getName(), method.getName(), methodDescriptor)) {
-//                        return;
-//                    }
-//                    else {
-//                        MethodsStorage.updateEpoch(method.getDeclaringClass().getName(), method.getName(), methodDescriptor);
-//                    }
-//                }
-//                else {
-//                    MethodsStorage.putMethod(constPool.getClassName(), method.getName(), methodDescriptor);
-//                }
-//            }
-
             int methodRefIndex = constPool.getMethodrefClass(index);
             String className = constPool.getClassInfo(methodRefIndex);
             String methodName = constPool.getMethodrefName(index);
+            if (AnalyzedMethodsStorage.contains(className, methodName, methodDescriptor)) {
+                requiresAnalysis = false;
+            }
+            var analyzedMethod = AnalyzedMethodsStorage.putMethod(className, methodName, methodDescriptor);
 //            logger.debug("Class name: {}, method name: {}, method descriptor: {}", className, methodName, methodDescriptor);
 
             int numberOfArguments = Descriptor.getParameterTypes(methodDescriptor, method.getDeclaringClass().getClassPool()).length;
@@ -310,12 +311,16 @@ public class InstructionsProcessor {
                 objectRef = Optional.of(stack.pop());
                 derivativeArgs.put(0, objectRef.get());
             }
+            if (allArgumentsAreNonDerivative(derivativeArgs) && analyzedMethod.notContainsInteractionWithEnvironment() && !requiresAnalysis) {
+                resultState = state;
+                resultState.setEmptyReturn();
+            }
+            else {
+                var resultAnalyser = analyser.mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, objectRef, state.getJvmState(), analyser.stacktrace);
+                analyser.methodCalls.put(index, resultAnalyser);
+                resultState = resultAnalyser.getAnalysisResult();
+            }
 
-            var resultAnalyser = analyser.mainAnalyser.analyseMethod(className, methodName, derivativeArgs, methodDescriptor, objectRef, state.getJvmState(), analyser.stacktrace);
-
-            analyser.methodCalls.put(index, resultAnalyser);
-
-            resultState = resultAnalyser.getAnalysisResult();
         }
             if (Descriptor.getReturnType(methodDescriptor, method.getDeclaringClass().getClassPool()) != null) {
                 if (resultState.getReturnState().isPresent()) {
@@ -342,5 +347,10 @@ public class InstructionsProcessor {
             result = result | (indexbyte << (bytesNumber - i - 1) * 8);
         }
         return result;
+    }
+
+    static boolean allArgumentsAreNonDerivative(Map<Integer, Entity> derivativeArgs) {
+        return derivativeArgs.values().stream().allMatch(Entity::isNonDerivative);
+
     }
 }

@@ -153,7 +153,6 @@ public class ControlFlowGraph {
 
 
     private ControlFlow.Block[] createMethodCFG(CtBehavior method) throws BadBytecode {
-
         MethodInfo methodInfo = method.getMethodInfo();
         ControlFlow controlFlow = new ControlFlow(method.getDeclaringClass(), methodInfo);
         return controlFlow.basicBlocks();

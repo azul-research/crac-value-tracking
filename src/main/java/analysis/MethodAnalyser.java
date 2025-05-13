@@ -72,9 +72,11 @@ public class MethodAnalyser extends MethodAnalyserBase {
     Map<Integer, Entity> startingDerivatives;
 
     Map<Integer, MethodAnalyserBase> methodCalls = new HashMap<>();
+    MyMethod currentMethod;
 
-    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, Map<Integer, Entity> derivativeVars, Analyser mainAnalyser, Optional<Entity> thisObject, JVMState jvmState, ArrayDeque<MyMethod> stacktrace) {
+    public MethodAnalyser(ControlFlow.Block[] cfgBlocks, CtBehavior method, Map<Integer, Entity> derivativeVars, Analyser mainAnalyser, Optional<Entity> thisObject, JVMState jvmState, ArrayDeque<MyMethod> stacktrace, MyMethod myMethod) {
         super(method, derivativeVars, jvmState);
+        this.currentMethod = myMethod;
         this.stacktrace = stacktrace;
 
         this.thisObj = thisObject;
@@ -332,6 +334,14 @@ public class MethodAnalyser extends MethodAnalyserBase {
             } else if (matchNew(name)) {
                 processor.processNew(iterator, index, stack);
             } else if (matchDuplicateValue(name)) {
+                stack.push(stack.getFirst());
+            } else if (matchDuplicateValue2(name)) {
+                var value1 = stack.pop();
+                var value2 = stack.pop();
+                stack.push(value1);
+                stack.push(value2);
+                stack.push(value1);
+                stack.push(value2);
                 stack.push(stack.getFirst());
             } else if (matchDuplicate1(name)) {
                 processor.processDup1(stack);

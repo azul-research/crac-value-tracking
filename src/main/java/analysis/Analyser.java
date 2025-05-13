@@ -70,14 +70,14 @@ public class Analyser {
 
 
     private boolean returnEnvironmentVariable(MyMethod method) {
-        if (method.myClass().fullName().equals(SYSTEM_CLASS_NAME)) {
+        if (method.className().fullName().equals(SYSTEM_CLASS_NAME)) {
             return GET_ENVIRONMENTAL_METHODS.contains(method.methodName());
         }
         return false;
     }
 
     private boolean returnSystemProperty(MyMethod method) {
-        if (method.myClass().fullName().equals(SYSTEM_CLASS_NAME)) {
+        if (method.className().fullName().equals(SYSTEM_CLASS_NAME)) {
             return GET_SYSTEM_PROPERTY_METHODS.contains(method.methodName());
         }
         return false;
@@ -121,7 +121,7 @@ public class Analyser {
     private MethodAnalyser analyseMethodInternal(ArrayDeque<MyMethod> stacktrace, MyMethod myMethod, CtBehavior method, ControlFlow.Block[] methodCFG, Map<Integer, Entity> derivativeArgs, Optional<Entity> currentObject, JVMState jvmState) {
         stacktrace.push(myMethod);
 
-        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, jvmState, stacktrace);
+        MethodAnalyser analyser = new MethodAnalyser(methodCFG, method, derivativeArgs, this, currentObject, jvmState, stacktrace, myMethod);
         analyser.analyseAllBlocks();
 
         stacktrace.pop();
@@ -191,9 +191,9 @@ public class Analyser {
         var jvmState = new JVMState();
         ArrayDeque<MyMethod> stacktrace = new ArrayDeque<>();
 
-        for (var cl : INITIALIZED_CLASSES) {
-            prepareClass(cl, jvmState, stacktrace);
-        }
+//        for (var cl : INITIALIZED_CLASSES) {
+//            prepareClass(cl, jvmState, stacktrace);
+//        }
 
         var rootDerivative = new RootDerivative(getMainArgumentName());
 

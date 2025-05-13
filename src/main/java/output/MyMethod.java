@@ -27,7 +27,5 @@
 
 package output;
 
-import java.util.Objects;
-
-public record MyMethod(MyClass myClass, String methodName, String methodDescriptor) {
+public record MyMethod(MyClass className, String methodName, String methodDescriptor) {
 }
