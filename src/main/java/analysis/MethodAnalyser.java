@@ -258,9 +258,7 @@ public class MethodAnalyser extends MethodAnalyserBase {
         while (index < blockEnd) {
             int opcode = iterator.byteAt(index);
             String name = Mnemonic.OPCODE[opcode];
-            if (fileName.equals("ArraysSupport.java") && getLineNumber(index) == 401 && index == 95 && name.equals("iinc")) {
-                System.out.println(1);
-            }
+
             logger.debug("{}{}:{} instruction:{} {}", "  ".repeat(stacktrace.size() + 1), fileName, getLineNumber(index), index, name);
 
             if (matchConstLoad(name) || matchConstLoadFromPool(name) || matchByteLoad(name)) {
