@@ -1,24 +1,56 @@
-# Usafe Code Analysis
+# CRaC Value Tracking
 
 ## What is it?
 
-This is a tool, that shows program dependencies on environment (program arguments, system properties, environmental variables). <br>
+This tool analyzes Java applications to identify dependencies on environmental factors such as program arguments, system properties, and environment variables. 
+It is particularly useful for assessing the suitability of applications for Coordinated Restore at Checkpoint (CRaC).
+
+## Getting Started
 
 
-## Result
-Result is a json file, it contains 2 parts: *static* - info about static fields, *local* - info about local variables. 
+### Prerequisites
 
+- Java Development Kit (JDK) 17 or higher
+- Maven
+
+### Building the Project
+
+Clone the repository and build the project using Maven:
+
+```bash
+git clone https://github.com/azul-research/crac-value-tracking.git
+cd crac-value-tracking
+mvn clean package
+```
 
 
 ## Usage
-How to use: execute main method from UnsafeCodeAnalysis class with arguments: <br>
-**first argument** - path to .jar file <br>
-**second argument** - full name of Main class <br>
-**third argument** - output file name (json file) for backward analysis <br>
-**fourth argument** - output file name (json file) for forward analysis <br>
-Example of arguments: `src/test/java/jars/test0.jar test.cases.test0.Main backward.json forward.json`
 
+Run the analysis tool with the following arguments:
+
+1. Path to the .jar file to analyze
+2. Fully qualified name of the main class
+3. Output file name for the backward analysis JSON report
+4. Output file name for the forward analysis JSON report
+
+Example:
+
+```bash
+java -cp target/crac-value-tracking.jar \
+org.example.UnsafeCodeAnalysis \
+path/to/application.jar \
+com.example.Main \
+backward.json \
+forward.json
+```
 Result will be saved to files `backward.json` and `forward.json`
+
+## Output format
+The tool produces two JSON files:
+
+* backward.json: Information about static fields and their environmental dependencies.
+* forward.json: Details on local variables and their reliance on external inputs.
+These reports help in understanding how the application interacts with its environment, which is crucial for CRaC compatibility.
 
 ## Tests
 Before running test, [jar-generation.sh](jar-generation.sh) should be executed <br>
@@ -37,10 +69,3 @@ Mentor: Anton Kozlov
 ## License
 
 BSD 2-Clause "Simplified" License
-
-## Project status
-Project has unfinished parts, what is not done:
-
-* add interpretation of `invokeinterface` and `invokedynamic` byte code instructions. 
-* add forward references.
-* fix bug: when analysis goes deeply inside standard library, infinite cycle appears.
